@@ -33,39 +33,74 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
     "-y": -Math.round(point.y), // Mirror for bottom half
   }));
 
-  // Calculate the maximum extent for equal scaling
+  // Calculate the data extents
   const maxX = Math.max(...data.map((d) => d.x));
   const maxY = Math.max(...data.map((d) => Math.abs(d.y)));
-  const maxExtent = Math.max(maxX, maxY * 2); // *2 because we show both positive and negative y
 
-  // Round up to nearest 50mm for cleaner scale
-  const domainMax = Math.ceil(maxExtent / 50) * 50;
+  // For equal scaling, we need the same mm range on both axes
+  // The chart area (excluding margins) should have equal pixel-per-mm ratio
+  const chartMargins = { top: 20, right: 30, left: 50, bottom: 40 };
+  const chartWidth = 800; // Approximate usable width
+  const chartHeight = height - chartMargins.top - chartMargins.bottom;
+
+  // Calculate the aspect ratio of available space
+  const aspectRatio = chartWidth / chartHeight;
+
+  // Determine domains to maintain equal scaling
+  let xDomain: [number, number];
+  let yDomain: [number, number];
+
+  // We want to show the full horn profile, so start with the data requirements
+  const requiredXRange = Math.ceil(maxX / 50) * 50;
+  const requiredYRange = Math.ceil((maxY * 2) / 50) * 50; // *2 for positive and negative
+
+  // Adjust domains to maintain equal scaling
+  if (requiredXRange / requiredYRange > aspectRatio) {
+    // X is the limiting factor
+    xDomain = [0, requiredXRange];
+    const yRange = requiredXRange / aspectRatio;
+    yDomain = [-yRange / 2, yRange / 2];
+  } else {
+    // Y is the limiting factor
+    const yRange = requiredYRange;
+    yDomain = [-yRange / 2, yRange / 2];
+    xDomain = [0, yRange * aspectRatio];
+  }
+
+  // Round domains to nearest 50mm for clean ticks
+  xDomain[1] = Math.ceil(xDomain[1] / 50) * 50;
+  yDomain[0] = -Math.ceil(Math.abs(yDomain[0]) / 50) * 50;
+  yDomain[1] = Math.ceil(yDomain[1] / 50) * 50;
 
   // Custom tick formatter to show only whole numbers
   const formatTick = (value: number) => {
     return Math.round(value).toString();
   };
 
+  // Generate tick marks at 50mm intervals
+  const xTicks = Array.from({ length: Math.floor(xDomain[1] / 50) + 1 }, (_, i) => i * 50);
+  const yTicks = Array.from(
+    { length: Math.floor((yDomain[1] - yDomain[0]) / 50) + 1 },
+    (_, i) => yDomain[0] + i * 50,
+  );
+
   return (
     <div className="horn-profile-viewer">
       <h3>{profile.metadata.profileType.toUpperCase()} Profile</h3>
       <ResponsiveContainer width={width} height={height}>
-        <LineChart data={data} margin={{ top: 20, right: 30, left: 40, bottom: 40 }}>
+        <LineChart data={data} margin={chartMargins}>
           {showGrid && <CartesianGrid strokeDasharray="3 3" />}
           <XAxis
             dataKey="x"
             label={{ value: "Length (mm)", position: "insideBottom", offset: -5 }}
-            domain={[0, domainMax]}
-            ticks={Array.from({ length: Math.floor(domainMax / 50) + 1 }, (_, i) => i * 50)}
+            domain={xDomain}
+            ticks={xTicks}
             tickFormatter={formatTick}
           />
           <YAxis
             label={{ value: "Radius (mm)", angle: -90, position: "insideLeft" }}
-            domain={[-domainMax / 2, domainMax / 2]}
-            ticks={Array.from(
-              { length: Math.floor(domainMax / 50) + 1 },
-              (_, i) => -domainMax / 2 + i * 50,
-            )}
+            domain={yDomain}
+            ticks={yTicks}
             tickFormatter={formatTick}
           />
           <Tooltip formatter={(value: number) => Math.round(value)} />
