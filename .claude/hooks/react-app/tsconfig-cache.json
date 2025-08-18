@@ -1,0 +1,11 @@
+{
+  "hashes": {
+    "C:\\Users\\cafal\\OneDrive\\Documents\\github\\hornProfiles\\tsconfig.json": "20c32387adc6caca58c0cf3aad8ece68f81d5a653bcd1465fd18b3f64b668dff"
+  },
+  "mappings": {
+    "src/**/*": {
+      "configPath": "C:\\Users\\cafal\\OneDrive\\Documents\\github\\hornProfiles\\tsconfig.json",
+      "excludes": []
+    }
+  }
+}

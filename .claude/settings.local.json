@@ -46,10 +46,26 @@
       "WebSearch",
       "Bash(npx tsx:*)",
       "WebFetch(domain:sphericalhorns.net)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(npx create-nx-workspace:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx nx generate:*)",
+      "Bash(cp:*)",
+      "Bash(nx build:*)",
+      "Bash(npx nx build:*)",
+      "Bash(npx nx serve:*)",
+      "Bash(npx nx run-many:*)"
     ],
     "deny": [],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "C:\\Users\\cafal\\OneDrive\\Documents\\GitHub",
+      "C:\\c\\Users\\cafal\\OneDrive\\Documents"
+    ]
   },
   "hooks": {
     "PostToolUse": [
