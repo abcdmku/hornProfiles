@@ -6,7 +6,6 @@ export { BaseHornProfile } from "./lib/profiles/base";
 export { ConicalProfile } from "./lib/profiles/conical";
 export { ExponentialProfile } from "./lib/profiles/exponential";
 export { TractrixProfile } from "./lib/profiles/tractrix";
-export { SphericalProfile } from "./lib/profiles/spherical";
 
 // Export registry
 export { ProfileRegistry } from "./lib/registry";

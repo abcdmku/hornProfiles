@@ -2,14 +2,12 @@ import { ProfileRegistry } from "./registry";
 import { ConicalProfile } from "./profiles/conical";
 import { ExponentialProfile } from "./profiles/exponential";
 import { TractrixProfile } from "./profiles/tractrix";
-import { SphericalProfile } from "./profiles/spherical";
 import { HornProfileParameters, ProfileGeneratorResult } from "./types";
 
 // Auto-register built-in profiles
 ProfileRegistry.register("conical", ConicalProfile);
 ProfileRegistry.register("exponential", ExponentialProfile);
 ProfileRegistry.register("tractrix", TractrixProfile);
-ProfileRegistry.register("spherical", SphericalProfile);
 
 // Convenience function for generating profiles
 export function generateProfile(

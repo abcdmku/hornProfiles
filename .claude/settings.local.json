@@ -62,7 +62,8 @@
       "Bash(npm ls:*)",
       "mcp__ide__getDiagnostics",
       "mcp__ide__executeCode",
-      "Bash(npx playwright screenshot:*)"
+      "Bash(npx playwright screenshot:*)",
+      "Bash(true)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

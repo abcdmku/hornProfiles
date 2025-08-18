@@ -113,7 +113,7 @@ export function App() {
               />
             </div>
 
-            {(profileType === "exponential" || profileType === "spherical") && (
+            {profileType === "exponential" && (
               <div>
                 <label
                   htmlFor="cutoff-frequency"
