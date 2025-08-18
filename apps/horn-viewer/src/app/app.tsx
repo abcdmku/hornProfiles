@@ -152,7 +152,7 @@ export function App() {
         </div>
 
         <div className="flex-1 bg-white rounded-lg shadow-md p-6">
-          <HornProfileViewer profile={profile} height={500} />
+          <HornProfileViewer profile={profile} height={600} />
         </div>
       </div>
     </div>
