@@ -58,7 +58,8 @@
       "Bash(nx build:*)",
       "Bash(npx nx build:*)",
       "Bash(npx nx serve:*)",
-      "Bash(npx nx run-many:*)"
+      "Bash(npx nx run-many:*)",
+      "Bash(npm ls:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

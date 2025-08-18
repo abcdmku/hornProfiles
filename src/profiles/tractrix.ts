@@ -14,84 +14,65 @@ export class TractrixProfile extends BaseHornProfile {
     // r0 = c / (2π*fc)
     const r0 = speedOfSound / (2 * Math.PI * cutoffFrequency);
 
-    // Tractrix is limited to radius < r0
-    // However, we need to ensure throat radius is also within limits
-    const theoreticalMax = r0 * 0.99;
-
-    if (throatRadius >= theoreticalMax) {
-      // If throat is already at or above limit, generate a linear approximation
-      const points: Point2D[] = [];
-      for (let i = 0; i <= resolution; i++) {
-        const t = i / resolution;
-        points.push({
-          x: length * t,
-          y: throatRadius + (mouthRadius - throatRadius) * t,
-        });
-      }
-      return {
-        points,
-        metadata: {
-          profileType: "tractrix",
-          parameters: normalizedParams,
-          calculatedValues: {
-            tractrixRadius: r0,
-            actualCutoffFrequency: speedOfSound / (2 * Math.PI * r0),
-            theoreticalMaxRadius: r0,
-            clampedMouthRadius: mouthRadius,
-            scaleFactor: 1,
-            linearApproximation: 1, // 1 indicates linear approximation was used
-          },
-        },
-      };
-    }
-
-    const yMin = throatRadius;
-    const yMax = Math.min(mouthRadius, theoreticalMax);
-
-    if (mouthRadius > theoreticalMax) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `Tractrix profile: Mouth radius ${mouthRadius}mm exceeds theoretical limit ${theoreticalMax.toFixed(2)}mm. ` +
-          `Clamping to ${yMax.toFixed(2)}mm.`,
-      );
-    }
+    // For a true tractrix, we need r0 > mouthRadius
+    // The tractrix parameter should be larger than the mouth radius
+    const tractrixParameter = Math.max(r0, mouthRadius * 1.01);
 
     const points: Point2D[] = [];
 
-    // Generate points along the horn profile
-    // Tractrix equation: x = r0 * ln((r0 + √(r0² - y²)) / y) - √(r0² - y²)
-    let maxX = 0;
+    // Generate points from throat to mouth
+    // We'll generate the tractrix curve and then scale it to fit the desired length
     const tempPoints: Point2D[] = [];
 
+    // Start from throat radius and expand to mouth radius
     for (let i = 0; i <= resolution; i++) {
-      const y = yMin + ((yMax - yMin) * i) / resolution;
+      const t = i / resolution;
+      const radius = throatRadius + (mouthRadius - throatRadius) * t;
 
-      if (y < r0 && y > 0) {
-        const sqrtTerm = safeSqrt(r0 * r0 - y * y);
-        const x = r0 * safeLog((r0 + sqrtTerm) / y) - sqrtTerm;
+      // Ensure radius doesn't exceed tractrix parameter
+      if (radius >= tractrixParameter) {
+        // If we've reached the limit, continue with a straight line
+        const lastX = tempPoints.length > 0 ? tempPoints[tempPoints.length - 1].x : 0;
+        tempPoints.push({
+          x: lastX + length * 0.01, // Small increment
+          y: radius,
+        });
+      } else {
+        // Calculate x position using tractrix equation
+        // x = r0 * [ln((r0 + sqrt(r0^2 - r^2))/r) - sqrt(1 - (r/r0)^2)]
+        const ratio = radius / tractrixParameter;
+        const sqrtTerm = safeSqrt(1 - ratio * ratio);
 
-        tempPoints.push({ x, y });
-        maxX = Math.max(maxX, x);
+        // The tractrix equation for x as a function of radius
+        const x = tractrixParameter * (safeLog((1 + sqrtTerm) / ratio) - sqrtTerm);
+
+        tempPoints.push({ x, y: radius });
       }
     }
 
-    // Scale x coordinates to fit desired length
-    const scaleFactor = maxX > 0 ? length / maxX : 1;
+    // Find the range of x values
+    let minX = Number.MAX_VALUE;
+    let maxX = Number.MIN_VALUE;
+    for (const point of tempPoints) {
+      minX = Math.min(minX, point.x);
+      maxX = Math.max(maxX, point.x);
+    }
 
+    // Normalize and scale to desired length
+    const xRange = maxX - minX;
+    const scaleFactor = xRange > 0 ? length / xRange : 1;
+
+    // Reverse the x-coordinates so the horn expands from throat to mouth
+    // and scale to fit the desired length
     for (const point of tempPoints) {
       points.push({
-        x: point.x * scaleFactor,
+        x: (maxX - point.x) * scaleFactor,
         y: point.y,
       });
     }
 
-    // If we don't have enough points, add a linear interpolation to reach the mouth
-    if (points.length > 0 && yMax < mouthRadius) {
-      points.push({
-        x: length,
-        y: mouthRadius,
-      });
-    }
+    // Sort points by x coordinate to ensure proper ordering
+    points.sort((a, b) => a.x - b.x);
 
     return {
       points,
@@ -100,9 +81,9 @@ export class TractrixProfile extends BaseHornProfile {
         parameters: normalizedParams,
         calculatedValues: {
           tractrixRadius: r0,
+          tractrixParameter,
           actualCutoffFrequency: speedOfSound / (2 * Math.PI * r0),
-          theoreticalMaxRadius: r0,
-          clampedMouthRadius: yMax,
+          theoreticalMaxRadius: tractrixParameter,
           scaleFactor,
         },
       },

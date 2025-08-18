@@ -18,49 +18,32 @@ export class SphericalProfile extends BaseHornProfile {
 
     const points: Point2D[] = [];
 
+    // For a spherical wave horn (Kugelwellenhorn), the area expansion follows:
+    // S(x) = S0 * (1 + m*x)^2
+    // where S is the cross-sectional area and m is the flare constant
+    // This gives radius: r(x) = r0 * (1 + m*x)
+
+    // However, we need to scale this to match our desired mouth radius at the given length
+    // Calculate the natural expansion factor
+    const naturalExpansion = 1 + m * length;
+    const desiredExpansion = mouthRadius / throatRadius;
+
+    // Adjust the flare constant to achieve the desired mouth radius
+    const adjustedM = (desiredExpansion - 1) / length;
+
     // Generate points along the horn profile
     for (let i = 0; i <= resolution; i++) {
       const x = (length * i) / resolution;
 
-      // For spherical wave horns, the profile can expand rapidly
-      // We apply a more sophisticated spherical cap calculation
-      // The radius at distance x is derived from the spherical wave propagation
+      // Spherical wave horn radius equation: r(x) = r0 * (1 + m*x)
+      // This creates a linear expansion of radius with distance
+      // which results in quadratic area expansion
+      const y = throatRadius * (1 + adjustedM * x);
 
-      // Calculate the effective radius considering spherical wavefront
-      // This is simplified from the full Kugelwellen equations
-      let y: number;
+      // Ensure we don't exceed physical constraints
+      const clampedY = clamp(y, throatRadius, mouthRadius);
 
-      if (x === 0) {
-        y = throatRadius;
-      } else {
-        // Spherical expansion with exponential area growth
-        const expansionFactor = Math.exp(m * x);
-
-        // The radius grows following spherical wave propagation
-        // Combined with exponential expansion for acoustic loading
-        y = throatRadius * Math.sqrt(expansionFactor);
-
-        // Apply physical constraints
-        y = clamp(y, throatRadius, mouthRadius);
-      }
-
-      points.push({ x, y });
-    }
-
-    // Ensure we reach the mouth radius at the end
-    if (points.length > 0) {
-      const lastPoint = points[points.length - 1];
-      if (Math.abs(lastPoint.y - mouthRadius) > 0.01) {
-        // Smooth transition to mouth radius
-        const smoothingPoints = 10;
-        const startIndex = Math.max(0, points.length - smoothingPoints - 1);
-
-        for (let i = startIndex; i < points.length; i++) {
-          const t = (i - startIndex) / (points.length - startIndex - 1);
-          const smoothY = lastPoint.y + (mouthRadius - lastPoint.y) * t;
-          points[i].y = smoothY;
-        }
-      }
+      points.push({ x, y: clampedY });
     }
 
     return {
@@ -70,9 +53,11 @@ export class SphericalProfile extends BaseHornProfile {
         parameters: normalizedParams,
         calculatedValues: {
           flareConstant: m,
+          adjustedFlareConstant: adjustedM,
           waveRadius,
           theoreticalCutoffFrequency: cutoffFrequency,
           volumeExpansion: (mouthRadius / throatRadius) ** 2,
+          naturalExpansionFactor: naturalExpansion,
         },
       },
     };
