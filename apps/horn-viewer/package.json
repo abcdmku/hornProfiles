@@ -1,0 +1,15 @@
+{
+  "name": "@horn-sim/horn-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.170.0",
+    "@react-three/fiber": "^8.18.0",
+    "@react-three/drei": "^9.117.0",
+    "@horn-sim/mesher": "workspace:*",
+    "@horn-sim/types": "workspace:*",
+    "horn-profiles": "workspace:*"
+  }
+}

@@ -71,7 +71,11 @@
       "Bash(npx tailwindcss:*)",
       "Bash(pnpm remove:*)",
       "Bash(pnpm store prune:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx nx list:*)",
+      "Bash(pnpm init:*)",
+      "Bash(pnpm nx run-many:*)",
+      "Bash(pnpm nx run:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

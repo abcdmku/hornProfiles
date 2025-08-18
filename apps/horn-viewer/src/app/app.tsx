@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { generateProfile, HornProfileParameters, getAvailableProfiles } from "horn-profiles";
 import { HornProfileViewer } from "viewer-2d";
+import { HornViewer3D } from "../components/HornViewer3D";
 
 export function App() {
   const [profileType, setProfileType] = useState("conical");
@@ -12,6 +13,9 @@ export function App() {
     cutoffFrequency: 100,
     speedOfSound: 343.2,
   });
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  const [wireframe, setWireframe] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(true);
 
   const profile = generateProfile(profileType, parameters);
   const availableProfiles = getAvailableProfiles();
@@ -163,6 +167,33 @@ export function App() {
                 />
               </div>
 
+              {/* 3D View Options */}
+              {viewMode === "3d" && (
+                <div className="space-y-3 pt-3 border-t border-slate-700/50">
+                  <h3 className="text-sm font-medium text-slate-300">3D View Options</h3>
+
+                  <label className="flex items-center space-x-2 text-sm text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={wireframe}
+                      onChange={(e) => setWireframe(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Wireframe</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 text-sm text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={autoRotate}
+                      onChange={(e) => setAutoRotate(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Auto Rotate</span>
+                  </label>
+                </div>
+              )}
+
               {/* Glass button */}
               <button className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-800 transform hover:-translate-y-0.5 transition-all duration-200 mt-4">
                 Generate Profile
@@ -172,8 +203,41 @@ export function App() {
 
           {/* Glass main content */}
           <div className="flex-1 backdrop-blur-lg bg-slate-800/30 rounded-2xl shadow-2xl p-6 border border-slate-700/30">
-            <div className="h-full">
-              <HornProfileViewer profile={profile} height={600} />
+            {/* View Mode Tabs */}
+            <div className="flex space-x-2 mb-4">
+              <button
+                onClick={() => setViewMode("2d")}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  viewMode === "2d"
+                    ? "bg-blue-600 text-white shadow-lg"
+                    : "bg-slate-900/50 text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                2D Profile
+              </button>
+              <button
+                onClick={() => setViewMode("3d")}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  viewMode === "3d"
+                    ? "bg-blue-600 text-white shadow-lg"
+                    : "bg-slate-900/50 text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                3D Model
+              </button>
+            </div>
+
+            {/* View Content */}
+            <div className="h-[calc(100%-3rem)]">
+              {viewMode === "2d" ? (
+                <HornProfileViewer profile={profile} height={600} />
+              ) : (
+                <HornViewer3D
+                  profileResult={profile}
+                  wireframe={wireframe}
+                  autoRotate={autoRotate}
+                />
+              )}
             </div>
           </div>
         </div>

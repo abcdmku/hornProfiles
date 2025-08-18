@@ -10,6 +10,12 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@horn-sim/client": ["libs/horn-sim/client/src/index.ts"],
+      "@horn-sim/elmer": ["libs/horn-sim/elmer/src/index.ts"],
+      "@horn-sim/mesher": ["libs/horn-mesher/src/index.ts"],
+      "@horn-sim/types": ["libs/horn-sim/types/src/index.ts"],
+      "@horn-sim/utils/fs": ["libs/utils/fs/src/index.ts"],
+      "@horn-sim/utils/hash": ["libs/utils/hash/src/index.ts"],
       "horn-profiles": ["libs/horn-profiles/src/index.ts"],
       "viewer-2d": ["libs/viewer-2d/src/index.ts"]
     }
