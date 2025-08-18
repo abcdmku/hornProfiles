@@ -113,9 +113,7 @@ export function App() {
               />
             </div>
 
-            {(profileType === "exponential" ||
-              profileType === "tractrix" ||
-              profileType === "spherical") && (
+            {(profileType === "exponential" || profileType === "spherical") && (
               <div>
                 <label
                   htmlFor="cutoff-frequency"

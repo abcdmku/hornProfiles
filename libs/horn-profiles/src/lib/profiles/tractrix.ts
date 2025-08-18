@@ -6,58 +6,92 @@ export class TractrixProfile extends BaseHornProfile {
     this.validateParameters(params);
     const normalizedParams = this.normalizeParameters(params);
 
-    const { throatRadius, mouthRadius, length, resolution, cutoffFrequency, speedOfSound } =
-      normalizedParams;
-
-    // Calculate the characteristic dimension for tractrix
-    // This is based on the cutoff frequency
-    const speedOfSoundMm = speedOfSound * 1000; // Convert m/s to mm/s
-    const r0 = speedOfSoundMm / (2 * Math.PI * cutoffFrequency);
+    const { throatRadius, mouthRadius, length, resolution } = normalizedParams;
 
     const points: Point2D[] = [];
 
-    // For a tractrix horn, the radius follows:
-    // r(x) = r_throat * cosh(x/x0) where x0 is a scaling factor
-    // We need to find x0 such that r(length) = mouthRadius
+    // If mouth <= throat, produce straight/near-straight profile
+    if (mouthRadius <= throatRadius || resolution <= 1) {
+      for (let i = 0; i <= resolution; i++) {
+        const x = (length * i) / resolution;
+        const y = throatRadius + (mouthRadius - throatRadius) * (i / resolution);
+        points.push({ x, y });
+      }
 
-    // First, calculate the expansion ratio
-    const expansionRatio = mouthRadius / throatRadius;
+      return {
+        points,
+        metadata: {
+          profileType: "tractrix",
+          parameters: normalizedParams,
+          calculatedValues: {
+            tractrixParameter_a: 0,
+            expansionRatio: mouthRadius / throatRadius,
+            actualMouthRadius: points[points.length - 1].y,
+            throatRadius,
+            hornLength: length,
+            pointCount: points.length,
+          },
+        },
+      };
+    }
 
-    // Find x0 such that cosh(length/x0) = expansionRatio
-    // x0 = length / acosh(expansionRatio)
-    let x0: number;
+    //
+    // Tractrix generation using x(y) = a * ln((a + sqrt(a^2 - y^2)) / y) - sqrt(a^2 - y^2)
+    // We'll set a = mouthRadius so the tractrix tangent is horizontal at the mouth.
+    //
+    const a = mouthRadius;
 
-    if (expansionRatio > 1) {
-      // acosh is only defined for values >= 1
-      const acoshValue = Math.log(expansionRatio + Math.sqrt(expansionRatio * expansionRatio - 1));
-      x0 = length / acoshValue;
+    // helper: compute x(y) raw (measured from mouth inward; x=0 at y=a)
+    function xOfY(aVal: number, yVal: number): number {
+      // numerical safety
+      const inside = aVal * aVal - yVal * yVal;
+      if (inside <= 0) {
+        // y >= a -> at/above mouth -> x = 0
+        return 0;
+      }
+      const sqrtTerm = Math.sqrt(inside);
+      // this is the standard form that returns x >= 0 for y < a, x=0 at y=a
+      const ratio = (aVal + sqrtTerm) / yVal;
+      // guard ratio numeric issues
+      const lnTerm = ratio > 0 ? Math.log(ratio) : 0;
+      return aVal * lnTerm - sqrtTerm;
+    }
+
+    // compute raw distance from mouth to throat for this 'a'
+    const xThroatRaw = xOfY(a, throatRadius);
+
+    // if for some reason the raw x is <= 0 (invalid), fallback to linear cone-like profile
+    if (!(isFinite(xThroatRaw) && xThroatRaw > 1e-9)) {
+      // fallback linear profile (defensive)
+      for (let i = 0; i <= resolution; i++) {
+        const x = (length * i) / resolution;
+        const y = throatRadius + (mouthRadius - throatRadius) * (i / resolution);
+        points.push({ x, y });
+      }
     } else {
-      // If no expansion, use a large x0 to make it nearly straight
-      x0 = length * 1000;
+      // create y samples from throat -> mouth (monotonic increase)
+      for (let i = 0; i <= resolution; i++) {
+        // linear spacing in y is stable for this inversion approach
+        const t = i / resolution;
+        const y = throatRadius + (mouthRadius - throatRadius) * t;
+
+        // raw x: 0 at mouth (y=a), xThroatRaw at throat (y=throatRadius)
+        const xRaw = xOfY(a, y);
+
+        // position along horn measured from throat: xPos = xThroatRaw - xRaw
+        const xPos = xThroatRaw - xRaw;
+
+        // scale into desired physical length
+        const xScaled = (xPos / xThroatRaw) * length;
+
+        points.push({
+          x: xScaled,
+          y: y,
+        });
+      }
     }
 
-    // Adjust x0 based on the cutoff frequency constraint
-    // The tractrix should respect the r0 parameter
-    const minX0 = r0 / 2; // Empirical adjustment for better matching with references
-    x0 = Math.max(x0, minX0);
-
-    // Generate points along the horn
-    for (let i = 0; i <= resolution; i++) {
-      const x = (length * i) / resolution;
-
-      // Calculate radius using hyperbolic cosine expansion
-      const r = throatRadius * Math.cosh(x / x0);
-
-      // Limit to mouth radius
-      const y = Math.min(r, mouthRadius);
-
-      points.push({
-        x: x,
-        y: y,
-      });
-    }
-
-    // Ensure smooth curve by checking for monotonic increase
+    // ensure monotonic non-decreasing radius (safety)
     for (let i = 1; i < points.length; i++) {
       if (points[i].y < points[i - 1].y) {
         points[i].y = points[i - 1].y;
@@ -72,12 +106,10 @@ export class TractrixProfile extends BaseHornProfile {
         profileType: "tractrix",
         parameters: normalizedParams,
         calculatedValues: {
-          r0_characteristic: r0,
-          x0_scale: x0,
-          expansionRatio: expansionRatio,
-          actualCutoffFrequency: speedOfSoundMm / (2 * Math.PI * r0),
+          tractrixParameter_a: a,
+          expansionRatio: mouthRadius / throatRadius,
           actualMouthRadius: actualMouthRadius,
-          throatRadius: throatRadius,
+          throatRadius,
           hornLength: length,
           pointCount: points.length,
         },
