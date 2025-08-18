@@ -37,40 +37,22 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
   const maxX = Math.max(...data.map((d) => d.x));
   const maxY = Math.max(...data.map((d) => Math.abs(d.y)));
 
-  // For equal scaling, we need the same mm range on both axes
-  // The chart area (excluding margins) should have equal pixel-per-mm ratio
-  const chartMargins = { top: 20, right: 30, left: 50, bottom: 40 };
-  const chartWidth = 800; // Approximate usable width
-  const chartHeight = height - chartMargins.top - chartMargins.bottom;
+  // We need to ensure the entire horn profile fits AND maintain equal scaling
+  // Add some padding (10%) to ensure the profile isn't touching the edges
+  const paddingFactor = 1.1;
+  const requiredXRange = maxX * paddingFactor;
+  const requiredYRange = maxY * 2 * paddingFactor; // *2 for positive and negative
 
-  // Calculate the aspect ratio of available space
-  const aspectRatio = chartWidth / chartHeight;
+  // To maintain equal scaling, we need the same mm-per-pixel ratio on both axes
+  // We'll use the larger requirement to ensure everything fits
+  const maxRange = Math.max(requiredXRange, requiredYRange);
 
-  // Determine domains to maintain equal scaling
-  let xDomain: [number, number];
-  let yDomain: [number, number];
+  // Round up to nearest 50mm for cleaner scale
+  const domainSize = Math.ceil(maxRange / 50) * 50;
 
-  // We want to show the full horn profile, so start with the data requirements
-  const requiredXRange = Math.ceil(maxX / 50) * 50;
-  const requiredYRange = Math.ceil((maxY * 2) / 50) * 50; // *2 for positive and negative
-
-  // Adjust domains to maintain equal scaling
-  if (requiredXRange / requiredYRange > aspectRatio) {
-    // X is the limiting factor
-    xDomain = [0, requiredXRange];
-    const yRange = requiredXRange / aspectRatio;
-    yDomain = [-yRange / 2, yRange / 2];
-  } else {
-    // Y is the limiting factor
-    const yRange = requiredYRange;
-    yDomain = [-yRange / 2, yRange / 2];
-    xDomain = [0, yRange * aspectRatio];
-  }
-
-  // Round domains to nearest 50mm for clean ticks
-  xDomain[1] = Math.ceil(xDomain[1] / 50) * 50;
-  yDomain[0] = -Math.ceil(Math.abs(yDomain[0]) / 50) * 50;
-  yDomain[1] = Math.ceil(yDomain[1] / 50) * 50;
+  // Set domains with equal ranges
+  const xDomain: [number, number] = [0, domainSize];
+  const yDomain: [number, number] = [-domainSize / 2, domainSize / 2];
 
   // Custom tick formatter to show only whole numbers
   const formatTick = (value: number) => {
@@ -78,17 +60,17 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
   };
 
   // Generate tick marks at 50mm intervals
-  const xTicks = Array.from({ length: Math.floor(xDomain[1] / 50) + 1 }, (_, i) => i * 50);
+  const xTicks = Array.from({ length: Math.floor(domainSize / 50) + 1 }, (_, i) => i * 50);
   const yTicks = Array.from(
-    { length: Math.floor((yDomain[1] - yDomain[0]) / 50) + 1 },
-    (_, i) => yDomain[0] + i * 50,
+    { length: Math.floor(domainSize / 50) + 1 },
+    (_, i) => -domainSize / 2 + i * 50,
   );
 
   return (
     <div className="horn-profile-viewer">
       <h3>{profile.metadata.profileType.toUpperCase()} Profile</h3>
       <ResponsiveContainer width={width} height={height}>
-        <LineChart data={data} margin={chartMargins}>
+        <LineChart data={data} margin={{ top: 20, right: 30, left: 50, bottom: 40 }}>
           {showGrid && <CartesianGrid strokeDasharray="3 3" />}
           <XAxis
             dataKey="x"
@@ -96,12 +78,16 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
             domain={xDomain}
             ticks={xTicks}
             tickFormatter={formatTick}
+            type="number"
+            allowDataOverflow={false}
           />
           <YAxis
             label={{ value: "Radius (mm)", angle: -90, position: "insideLeft" }}
             domain={yDomain}
             ticks={yTicks}
             tickFormatter={formatTick}
+            type="number"
+            allowDataOverflow={false}
           />
           <Tooltip formatter={(value: number) => Math.round(value)} />
           <Legend />
