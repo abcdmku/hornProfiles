@@ -69,9 +69,9 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
   return (
     <div className="horn-profile-viewer h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold text-white flex items-center">
+        <h3 className="text-xl font-semibold text-slate-100 flex items-center">
           <svg
-            className="w-5 h-5 mr-2 text-cyan-400"
+            className="w-5 h-5 mr-2 text-blue-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -86,82 +86,85 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
           {profile.metadata.profileType.toUpperCase()} Profile
         </h3>
         <div className="flex items-center space-x-2">
-          <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded-full">
+          <span className="text-xs text-slate-400 bg-slate-700/30 px-2 py-1 rounded-full">
             {data.length} points
           </span>
         </div>
       </div>
 
-      <div className="flex-1 bg-black/30 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+      <div className="flex-1 bg-slate-900/40 backdrop-blur-sm rounded-xl p-4 border border-slate-700/30">
         <ResponsiveContainer width={width} height={height}>
           <LineChart data={data} margin={{ top: 20, right: 30, left: 50, bottom: 40 }}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />}
+            {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />}
             <XAxis
               dataKey="x"
               label={{
                 value: "Length (mm)",
                 position: "insideBottom",
                 offset: -5,
-                fill: "#E9D5FF",
+                fill: "#94A3B8",
               }}
               domain={xDomain}
               ticks={xTicks}
               tickFormatter={formatTick}
               type="number"
               allowDataOverflow={false}
-              stroke="#E9D5FF"
-              tick={{ fill: "#E9D5FF" }}
+              stroke="#475569"
+              tick={{ fill: "#94A3B8" }}
             />
             <YAxis
-              label={{ value: "Radius (mm)", angle: -90, position: "insideLeft", fill: "#E9D5FF" }}
+              label={{ value: "Radius (mm)", angle: -90, position: "insideLeft", fill: "#94A3B8" }}
               domain={yDomain}
               ticks={yTicks}
               tickFormatter={formatTick}
               type="number"
               allowDataOverflow={false}
-              stroke="#E9D5FF"
-              tick={{ fill: "#E9D5FF" }}
+              stroke="#475569"
+              tick={{ fill: "#94A3B8" }}
             />
             <Tooltip
               formatter={(value: number) => Math.round(value)}
               contentStyle={{
-                backgroundColor: "rgba(0,0,0,0.8)",
-                border: "1px solid rgba(255,255,255,0.2)",
+                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                border: "1px solid rgba(71, 85, 105, 0.5)",
                 borderRadius: "8px",
                 backdropFilter: "blur(10px)",
               }}
-              labelStyle={{ color: "#E9D5FF" }}
+              labelStyle={{ color: "#94A3B8" }}
             />
             <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="line" />
             <Line
               type="monotone"
               dataKey="y"
-              stroke="#A78BFA"
+              stroke="#3B82F6"
               name="Top Profile"
               strokeWidth={3}
               dot={false}
-              activeDot={{ r: 6, fill: "#8B5CF6" }}
+              activeDot={{ r: 6, fill: "#2563EB" }}
             />
             <Line
               type="monotone"
               dataKey="-y"
-              stroke="#60A5FA"
+              stroke="#06B6D4"
               name="Bottom Profile"
               strokeWidth={3}
               dot={false}
-              activeDot={{ r: 6, fill: "#3B82F6" }}
+              activeDot={{ r: 6, fill: "#0891B2" }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-        <h4 className="text-sm font-semibold text-purple-300 mb-3">Calculated Values</h4>
+      <div className="mt-4 p-4 bg-slate-900/40 backdrop-blur-sm rounded-xl border border-slate-700/30">
+        <h4 className="text-sm font-semibold text-slate-300 mb-3">Calculated Values</h4>
         <div className="grid grid-cols-2 gap-3">
           {Object.entries(profile.metadata.calculatedValues).map(([key, value]) => (
-            <div key={key} className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
-              <span className="text-xs text-purple-200">{key}:</span>
-              <span className="text-sm font-semibold text-white">
+            <div
+              key={key}
+              className="flex justify-between items-center p-2 bg-slate-800/30 rounded-lg"
+            >
+              <span className="text-xs text-slate-400">{key}:</span>
+              <span className="text-sm font-semibold text-slate-100">
                 {typeof value === "number"
                   ? Number.isInteger(value)
                     ? value

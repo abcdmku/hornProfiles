@@ -23,9 +23,9 @@ module.exports = {
       },
       keyframes: {
         glow: {
-          "0%": { boxShadow: "0 0 5px rgba(139, 92, 246, 0.5), 0 0 10px rgba(139, 92, 246, 0.3)" },
+          "0%": { boxShadow: "0 0 5px rgba(59, 130, 246, 0.3), 0 0 10px rgba(59, 130, 246, 0.2)" },
           "100%": {
-            boxShadow: "0 0 10px rgba(139, 92, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.5)",
+            boxShadow: "0 0 10px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3)",
           },
         },
         float: {
