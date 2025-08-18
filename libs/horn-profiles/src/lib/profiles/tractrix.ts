@@ -15,46 +15,57 @@ export class TractrixProfile extends BaseHornProfile {
     const r0_mm = (speedOfSound * 1000) / (2 * Math.PI * cutoffFrequency);
 
     // Determine the actual mouth radius (cannot exceed r0)
+    // Tractrix profile asymptotically approaches r0, so we limit to 99.9% of r0
     const actualMouthRadius = Math.min(mouthRadius, r0_mm * 0.999);
 
-    // The tractrix equation gives x as a function of radius y:
-    // x = r0 * ln((r0 + sqrt(r0^2 - y^2)) / y) - sqrt(r0^2 - y^2)
-    // This naturally gives larger x for smaller y (throat) and smaller x for larger y (mouth)
-
     const points: Point2D[] = [];
-    const tempPoints: { x: number; y: number }[] = [];
 
-    // Generate points from throat to mouth
+    // For tractrix, we need to generate points along x-axis and calculate y
+    // This gives the characteristic curved shape
+
+    // First, calculate the x-range for the tractrix curve
+    const yMin = throatRadius;
+    const yMax = actualMouthRadius;
+
+    // Calculate x values at throat and mouth using tractrix equation
+    const xThroat =
+      r0_mm * Math.log((r0_mm + Math.sqrt(r0_mm * r0_mm - yMin * yMin)) / yMin) -
+      Math.sqrt(r0_mm * r0_mm - yMin * yMin);
+    const xMouth =
+      r0_mm * Math.log((r0_mm + Math.sqrt(r0_mm * r0_mm - yMax * yMax)) / yMax) -
+      Math.sqrt(r0_mm * r0_mm - yMax * yMax);
+    const xRange = xThroat - xMouth;
+
+    // Generate points along the x-axis (uniformly spaced in x)
     for (let i = 0; i <= resolution; i++) {
-      const y = throatRadius + (actualMouthRadius - throatRadius) * (i / resolution);
+      // We need to find y for this x position
+      // This requires inverting the tractrix equation numerically
+      // For simplicity, we'll use a different approach:
+      // Generate more points with finer y-spacing and interpolate
+
+      // Alternative: use parametric form with non-linear parameter
+      const t = i / resolution;
+      // Use exponential parameter mapping for better curve representation
+      const expT = (Math.exp(t * 2) - 1) / (Math.exp(2) - 1);
+      const y = yMin + (yMax - yMin) * expT;
 
       if (y > 0 && y < r0_mm) {
-        // Tractrix equation
         const sqrtTerm = Math.sqrt(r0_mm * r0_mm - y * y);
-        const x = r0_mm * Math.log((r0_mm + sqrtTerm) / y) - sqrtTerm;
-        tempPoints.push({ x, y });
+        const rawX = r0_mm * Math.log((r0_mm + sqrtTerm) / y) - sqrtTerm;
+
+        // Normalize x to horn length
+        const x = ((xThroat - rawX) / xRange) * length;
+
+        points.push({
+          x: x,
+          y: y,
+        });
       }
     }
 
-    // The tractrix naturally generates x values that decrease as radius increases
-    // We need to normalize so x=0 at throat and x=length at mouth
-    if (tempPoints.length > 1) {
-      // Find the x range
-      const xThroat = tempPoints[0].x; // Largest x (at throat)
-      const xMouth = tempPoints[tempPoints.length - 1].x; // Smallest x (at mouth)
-      const xRange = xThroat - xMouth;
-
-      // Scale and flip to get proper horn profile
-      const scaleFactor = xRange > 0 ? length / xRange : 1;
-
-      for (let i = 0; i < tempPoints.length; i++) {
-        points.push({
-          x: (xThroat - tempPoints[i].x) * scaleFactor,
-          y: tempPoints[i].y,
-        });
-      }
-    } else {
-      // Fallback to linear if tractrix calculation fails
+    // Ensure we have proper start and end points
+    if (points.length < 2) {
+      // Fallback to linear if calculation fails
       for (let i = 0; i <= resolution; i++) {
         const t = i / resolution;
         points.push({

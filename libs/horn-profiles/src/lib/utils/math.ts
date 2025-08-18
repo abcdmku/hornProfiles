@@ -54,3 +54,18 @@ export function safeDivide(numerator: number, denominator: number): number {
   }
   return numerator / denominator;
 }
+
+export function sinh(x: number): number {
+  return (Math.exp(x) - Math.exp(-x)) / 2;
+}
+
+export function cosh(x: number): number {
+  return (Math.exp(x) + Math.exp(-x)) / 2;
+}
+
+export function safeLogWithEpsilon(value: number, epsilon = 1e-10): number {
+  if (value <= epsilon) {
+    return Math.log(epsilon);
+  }
+  return Math.log(value);
+}
