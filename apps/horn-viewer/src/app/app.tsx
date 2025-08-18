@@ -113,24 +113,6 @@ export function App() {
               />
             </div>
 
-            {profileType === "exponential" && (
-              <div>
-                <label
-                  htmlFor="cutoff-frequency"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Cutoff Frequency (Hz)
-                </label>
-                <input
-                  id="cutoff-frequency"
-                  type="number"
-                  value={parameters.cutoffFrequency}
-                  onChange={(e) => handleParameterChange("cutoffFrequency", e.currentTarget.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-              </div>
-            )}
-
             <div>
               <label
                 htmlFor="speed-of-sound"

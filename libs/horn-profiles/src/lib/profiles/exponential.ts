@@ -1,19 +1,15 @@
 import { HornProfileParameters, Point2D, ProfileGeneratorResult } from "../types";
 import { BaseHornProfile } from "./base";
-import { calculateFlareConstant, safeLog } from "../utils/math";
+import { safeLog } from "../utils/math";
 
 export class ExponentialProfile extends BaseHornProfile {
   generate(params: HornProfileParameters): ProfileGeneratorResult {
     this.validateParameters(params);
     const normalizedParams = this.normalizeParameters(params);
 
-    const { throatRadius, mouthRadius, length, resolution, cutoffFrequency, speedOfSound } =
-      normalizedParams;
+    const { throatRadius, mouthRadius, length, resolution } = normalizedParams;
 
-    // Calculate theoretical flare constant: m = 4π*fc/c
-    const theoreticalFlareConstant = calculateFlareConstant(cutoffFrequency, speedOfSound);
-
-    // Calculate adjusted flare constant to match mouth radius at length L
+    // Calculate flare constant to match mouth radius at length L
     // For radius: r(x) = r0 * exp(m*x/2)
     // At x = L: rm = r0 * exp(m*L/2)
     // Therefore: m = (2 * ln(rm/r0)) / L
@@ -29,9 +25,6 @@ export class ExponentialProfile extends BaseHornProfile {
       points.push({ x, y });
     }
 
-    // Calculate the actual cutoff frequency based on the adjusted flare constant
-    const actualCutoffFrequency = (mAdjusted * speedOfSound) / (4 * Math.PI);
-
     return {
       points,
       metadata: {
@@ -39,8 +32,6 @@ export class ExponentialProfile extends BaseHornProfile {
         parameters: normalizedParams,
         calculatedValues: {
           flareConstant: mAdjusted,
-          theoreticalFlareConstant,
-          actualCutoffFrequency,
           expansionFactor: Math.exp(mAdjusted),
           volumeExpansion: (mouthRadius / throatRadius) ** 2,
         },
