@@ -67,62 +67,110 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
   );
 
   return (
-    <div className="horn-profile-viewer">
-      <h3>{profile.metadata.profileType.toUpperCase()} Profile</h3>
-      <ResponsiveContainer width={width} height={height}>
-        <LineChart data={data} margin={{ top: 20, right: 30, left: 50, bottom: 40 }}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis
-            dataKey="x"
-            label={{ value: "Length (mm)", position: "insideBottom", offset: -5 }}
-            domain={xDomain}
-            ticks={xTicks}
-            tickFormatter={formatTick}
-            type="number"
-            allowDataOverflow={false}
-          />
-          <YAxis
-            label={{ value: "Radius (mm)", angle: -90, position: "insideLeft" }}
-            domain={yDomain}
-            ticks={yTicks}
-            tickFormatter={formatTick}
-            type="number"
-            allowDataOverflow={false}
-          />
-          <Tooltip formatter={(value: number) => Math.round(value)} />
-          <Legend />
-          <Line
-            type="monotone"
-            dataKey="y"
-            stroke={strokeColor}
-            name="Top Profile"
-            strokeWidth={2}
-            dot={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="-y"
-            stroke={strokeColor}
-            name="Bottom Profile"
-            strokeWidth={2}
-            dot={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-      <div className="profile-metadata">
-        <h4>Calculated Values:</h4>
-        <ul>
+    <div className="horn-profile-viewer h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-semibold text-white flex items-center">
+          <svg
+            className="w-5 h-5 mr-2 text-cyan-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+          {profile.metadata.profileType.toUpperCase()} Profile
+        </h3>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded-full">
+            {data.length} points
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 bg-black/30 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+        <ResponsiveContainer width={width} height={height}>
+          <LineChart data={data} margin={{ top: 20, right: 30, left: 50, bottom: 40 }}>
+            {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />}
+            <XAxis
+              dataKey="x"
+              label={{
+                value: "Length (mm)",
+                position: "insideBottom",
+                offset: -5,
+                fill: "#E9D5FF",
+              }}
+              domain={xDomain}
+              ticks={xTicks}
+              tickFormatter={formatTick}
+              type="number"
+              allowDataOverflow={false}
+              stroke="#E9D5FF"
+              tick={{ fill: "#E9D5FF" }}
+            />
+            <YAxis
+              label={{ value: "Radius (mm)", angle: -90, position: "insideLeft", fill: "#E9D5FF" }}
+              domain={yDomain}
+              ticks={yTicks}
+              tickFormatter={formatTick}
+              type="number"
+              allowDataOverflow={false}
+              stroke="#E9D5FF"
+              tick={{ fill: "#E9D5FF" }}
+            />
+            <Tooltip
+              formatter={(value: number) => Math.round(value)}
+              contentStyle={{
+                backgroundColor: "rgba(0,0,0,0.8)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: "8px",
+                backdropFilter: "blur(10px)",
+              }}
+              labelStyle={{ color: "#E9D5FF" }}
+            />
+            <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="line" />
+            <Line
+              type="monotone"
+              dataKey="y"
+              stroke="#A78BFA"
+              name="Top Profile"
+              strokeWidth={3}
+              dot={false}
+              activeDot={{ r: 6, fill: "#8B5CF6" }}
+            />
+            <Line
+              type="monotone"
+              dataKey="-y"
+              stroke="#60A5FA"
+              name="Bottom Profile"
+              strokeWidth={3}
+              dot={false}
+              activeDot={{ r: 6, fill: "#3B82F6" }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="mt-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+        <h4 className="text-sm font-semibold text-purple-300 mb-3">Calculated Values</h4>
+        <div className="grid grid-cols-2 gap-3">
           {Object.entries(profile.metadata.calculatedValues).map(([key, value]) => (
-            <li key={key}>
-              <strong>{key}:</strong>{" "}
-              {typeof value === "number"
-                ? Number.isInteger(value)
-                  ? value
-                  : value.toFixed(2)
-                : value}
-            </li>
+            <div key={key} className="flex justify-between items-center p-2 bg-white/5 rounded-lg">
+              <span className="text-xs text-purple-200">{key}:</span>
+              <span className="text-sm font-semibold text-white">
+                {typeof value === "number"
+                  ? Number.isInteger(value)
+                    ? value
+                    : value.toFixed(2)
+                  : value}
+              </span>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );
