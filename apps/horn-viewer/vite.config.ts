@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { nxViteTsPaths } from "@nx/vite/plugins/nx-tsconfig-paths.plugin";
 import { nxCopyAssetsPlugin } from "@nx/vite/plugins/nx-copy-assets.plugin";
+import { resolve } from "path";
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -20,6 +21,13 @@ export default defineConfig(() => ({
   // worker: {
   //  plugins: [ nxViteTsPaths() ],
   // },
+  resolve: {
+    dedupe: ["react", "react-dom"],
+    alias: {
+      react: resolve(__dirname, "../../node_modules/react"),
+      "react-dom": resolve(__dirname, "../../node_modules/react-dom"),
+    },
+  },
   build: {
     outDir: "../../dist/apps/horn-viewer",
     emptyOutDir: true,
