@@ -1,0 +1,9 @@
+{
+  "name": "viewer-2d",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/viewer-2d/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project viewer-2d --web",
+  "targets": {}
+}

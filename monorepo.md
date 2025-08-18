@@ -1,0 +1,1 @@
+refactor this repo to use an nx monorepo using pnpm. the current code should be migrated to a horn profile library in /libs. add a 2d viewer library in the libs folder. i want to have an apps folder with one react app for now.

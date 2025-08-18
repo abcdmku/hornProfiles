@@ -1,0 +1,18 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "sourceMap": true,
+    "declaration": true,
+    "moduleResolution": "node",
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "horn-profiles": ["libs/horn-profiles/src/index.ts"],
+      "viewer-2d": ["libs/viewer-2d/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "tests"]
+}

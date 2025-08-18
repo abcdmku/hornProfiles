@@ -1,0 +1,19 @@
+{
+  "name": "horn-profiles",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/horn-profiles/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/horn-profiles",
+        "main": "libs/horn-profiles/src/index.ts",
+        "tsConfig": "libs/horn-profiles/tsconfig.lib.json",
+        "assets": ["libs/horn-profiles/*.md"]
+      }
+    }
+  }
+}
