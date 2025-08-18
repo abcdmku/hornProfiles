@@ -59,7 +59,10 @@
       "Bash(npx nx build:*)",
       "Bash(npx nx serve:*)",
       "Bash(npx nx run-many:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "mcp__ide__getDiagnostics",
+      "mcp__ide__executeCode",
+      "Bash(npx playwright screenshot:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
