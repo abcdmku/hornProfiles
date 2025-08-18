@@ -1,0 +1,1 @@
+the 2d viewer should be like a cad software where the user can view the plots of the horn profiles. the 2d viewer should not know anything about the profiles themself as it is an isolated plotter. it should give helpful tools for analizing the plots. build it bueatiful to fit the modern tailwind look the erest of the app has.
