@@ -44,7 +44,7 @@ export function App() {
               <select
                 id="profile-type"
                 value={profileType}
-                onChange={(e) => setProfileType(e.target.value)}
+                onChange={(e) => setProfileType(e.currentTarget.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 {availableProfiles.map((type) => (
@@ -66,7 +66,7 @@ export function App() {
                 id="throat-radius"
                 type="number"
                 value={parameters.throatRadius}
-                onChange={(e) => handleParameterChange("throatRadius", e.target.value)}
+                onChange={(e) => handleParameterChange("throatRadius", e.currentTarget.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
@@ -82,7 +82,7 @@ export function App() {
                 id="mouth-radius"
                 type="number"
                 value={parameters.mouthRadius}
-                onChange={(e) => handleParameterChange("mouthRadius", e.target.value)}
+                onChange={(e) => handleParameterChange("mouthRadius", e.currentTarget.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
@@ -95,7 +95,7 @@ export function App() {
                 id="length"
                 type="number"
                 value={parameters.length}
-                onChange={(e) => handleParameterChange("length", e.target.value)}
+                onChange={(e) => handleParameterChange("length", e.currentTarget.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
@@ -108,7 +108,7 @@ export function App() {
                 id="resolution"
                 type="number"
                 value={parameters.resolution}
-                onChange={(e) => handleParameterChange("resolution", e.target.value)}
+                onChange={(e) => handleParameterChange("resolution", e.currentTarget.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
@@ -127,7 +127,7 @@ export function App() {
                   id="cutoff-frequency"
                   type="number"
                   value={parameters.cutoffFrequency}
-                  onChange={(e) => handleParameterChange("cutoffFrequency", e.target.value)}
+                  onChange={(e) => handleParameterChange("cutoffFrequency", e.currentTarget.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
@@ -144,7 +144,7 @@ export function App() {
                 id="speed-of-sound"
                 type="number"
                 value={parameters.speedOfSound}
-                onChange={(e) => handleParameterChange("speedOfSound", e.target.value)}
+                onChange={(e) => handleParameterChange("speedOfSound", e.currentTarget.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
