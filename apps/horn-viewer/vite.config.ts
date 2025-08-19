@@ -3,7 +3,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { nxViteTsPaths } from "@nx/vite/plugins/nx-tsconfig-paths.plugin";
 import { nxCopyAssetsPlugin } from "@nx/vite/plugins/nx-copy-assets.plugin";
-import { resolve } from "path";
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -21,11 +20,25 @@ export default defineConfig(() => ({
   // worker: {
   //  plugins: [ nxViteTsPaths() ],
   // },
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "three",
+    ],
+    exclude: ["@nx/vite", "@nx/react"],
+    esbuildOptions: {
+      target: "esnext",
+    },
+  },
   resolve: {
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "react/jsx-runtime"],
     alias: {
-      react: resolve(__dirname, "../../node_modules/react"),
-      "react-dom": resolve(__dirname, "../../node_modules/react-dom"),
+      react: "react",
+      "react-dom": "react-dom",
     },
   },
   build: {
