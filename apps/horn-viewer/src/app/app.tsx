@@ -19,6 +19,8 @@ export function App() {
   const [wireframe, setWireframe] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
+  const [meshResolution, setMeshResolution] = useState(50);
+  const [meshElementSize, setMeshElementSize] = useState(5);
 
   const profile = generateProfile(profileType, parameters);
   const availableProfiles = getAvailableProfiles();
@@ -34,12 +36,12 @@ export function App() {
     };
 
     const mesh = generateHornMesh3D(hornGeometry, {
-      resolution: 50,
-      elementSize: 5,
+      resolution: meshResolution,
+      elementSize: meshElementSize,
     });
 
     return meshToThree(mesh);
-  }, [profile, meshMode]);
+  }, [profile, meshMode, meshResolution, meshElementSize]);
 
   const handleParameterChange = (key: keyof HornProfileParameters, value: string) => {
     setParameters((prev) => ({
@@ -212,6 +214,42 @@ export function App() {
                       <option value="ellipse">Ellipse</option>
                       <option value="rectangular">Rectangular</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="mesh-resolution"
+                      className="block text-sm font-medium text-slate-300 mb-2"
+                    >
+                      Mesh Resolution ({meshResolution})
+                    </label>
+                    <input
+                      id="mesh-resolution"
+                      type="range"
+                      min="10"
+                      max="100"
+                      value={meshResolution}
+                      onChange={(e) => setMeshResolution(Number(e.currentTarget.value))}
+                      className="w-full h-2 bg-slate-900/50 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="element-size"
+                      className="block text-sm font-medium text-slate-300 mb-2"
+                    >
+                      Element Size ({meshElementSize}mm)
+                    </label>
+                    <input
+                      id="element-size"
+                      type="range"
+                      min="1"
+                      max="20"
+                      value={meshElementSize}
+                      onChange={(e) => setMeshElementSize(Number(e.currentTarget.value))}
+                      className="w-full h-2 bg-slate-900/50 rounded-lg appearance-none cursor-pointer"
+                    />
                   </div>
 
                   <label className="flex items-center space-x-2 text-sm text-slate-400">
