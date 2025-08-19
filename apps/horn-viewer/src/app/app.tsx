@@ -20,7 +20,6 @@ export function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
   const [meshResolution, setMeshResolution] = useState(50);
-  const [meshElementSize, setMeshElementSize] = useState(5);
 
   const profile = generateProfile(profileType, parameters);
   const availableProfiles = getAvailableProfiles();
@@ -37,11 +36,11 @@ export function App() {
 
     const mesh = generateHornMesh3D(hornGeometry, {
       resolution: meshResolution,
-      elementSize: meshElementSize,
+      elementSize: 5, // This parameter is not used in the current implementation
     });
 
     return meshToThree(mesh);
-  }, [profile, meshMode, meshResolution, meshElementSize]);
+  }, [profile, meshMode, meshResolution]);
 
   const handleParameterChange = (key: keyof HornProfileParameters, value: string) => {
     setParameters((prev) => ({
@@ -221,35 +220,25 @@ export function App() {
                       htmlFor="mesh-resolution"
                       className="block text-sm font-medium text-slate-300 mb-2"
                     >
-                      Mesh Resolution ({meshResolution})
+                      Mesh Quality
                     </label>
-                    <input
-                      id="mesh-resolution"
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={meshResolution}
-                      onChange={(e) => setMeshResolution(Number(e.currentTarget.value))}
-                      className="w-full h-2 bg-slate-900/50 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="element-size"
-                      className="block text-sm font-medium text-slate-300 mb-2"
-                    >
-                      Element Size ({meshElementSize}mm)
-                    </label>
-                    <input
-                      id="element-size"
-                      type="range"
-                      min="1"
-                      max="20"
-                      value={meshElementSize}
-                      onChange={(e) => setMeshElementSize(Number(e.currentTarget.value))}
-                      className="w-full h-2 bg-slate-900/50 rounded-lg appearance-none cursor-pointer"
-                    />
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-slate-500">Low</span>
+                      <input
+                        id="mesh-resolution"
+                        type="range"
+                        min="10"
+                        max="100"
+                        step="10"
+                        value={meshResolution}
+                        onChange={(e) => setMeshResolution(Number(e.currentTarget.value))}
+                        className="flex-1 h-2 bg-slate-900/50 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="text-xs text-slate-500">High</span>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Resolution: {meshResolution} segments
+                    </div>
                   </div>
 
                   <label className="flex items-center space-x-2 text-sm text-slate-400">
