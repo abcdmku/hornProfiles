@@ -3,7 +3,11 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/utils/fs/src",
   "projectType": "library",
-  "tags": [],
+  "tags": ["type:util", "scope:shared"],
   "// targets": "to see all targets run: nx show project fs --web",
-  "targets": {}
+  "targets": {
+    "build": {
+      "dependsOn": ["^build"]
+    }
+  }
 }

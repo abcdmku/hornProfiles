@@ -1,17 +1,20 @@
 {
-  "name": "horn-viewer",
+  "name": "@horn-sim/api",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "apps/horn-viewer/src",
+  "sourceRoot": "apps/api/src",
   "projectType": "application",
-  "tags": [],
+  "tags": ["type:api"],
   "implicitDependencies": [
-    "horn-mesher",
     "types",
-    "horn-profiles"
+    "elmer",
+    "fs",
+    "hash"
   ],
-  "// targets": "to see all targets run: nx show project horn-viewer --web",
   "targets": {
     "build": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
       "dependsOn": ["^build"]
     },
     "serve": {

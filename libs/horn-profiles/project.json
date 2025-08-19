@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/horn-profiles/src",
   "projectType": "library",
-  "tags": [],
+  "tags": ["type:lib", "scope:core"],
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
@@ -13,7 +13,8 @@
         "main": "libs/horn-profiles/src/index.ts",
         "tsConfig": "libs/horn-profiles/tsconfig.lib.json",
         "assets": ["libs/horn-profiles/*.md"]
-      }
+      },
+      "dependsOn": ["^build"]
     }
   }
 }

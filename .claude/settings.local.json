@@ -75,7 +75,9 @@
       "Bash(npx nx list:*)",
       "Bash(pnpm init:*)",
       "Bash(pnpm nx run-many:*)",
-      "Bash(pnpm nx run:*)"
+      "Bash(pnpm nx run:*)",
+      "Bash(npx nx graph:*)",
+      "Bash(npx nx show:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
