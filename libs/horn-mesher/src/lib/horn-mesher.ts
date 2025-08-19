@@ -63,9 +63,9 @@ export function generateHornMesh3D(
   geometry: HornGeometry,
   options: MeshGenerationOptions,
 ): MeshData {
-  const { mode, profile } = geometry;
+  const { mode, profile, widthProfile, heightProfile } = geometry;
 
-  if (mode === "circle") {
+  if (mode === "circle" && !widthProfile && !heightProfile) {
     return generateHornMesh2D(profile, options);
   }
 
@@ -82,13 +82,11 @@ export function generateHornMesh3D(
     const x = point.x;
     const baseRadius = point.y;
 
-    const crossSection = generateCrossSection(
-      mode,
-      baseRadius,
-      geometry.width,
-      geometry.height,
-      circumferenceSteps,
-    );
+    // Use profile-specific dimensions if available
+    const width = widthProfile ? widthProfile[i].y * 2 : geometry.width;
+    const height = heightProfile ? heightProfile[i].y * 2 : geometry.height;
+
+    const crossSection = generateCrossSection(mode, baseRadius, width, height, circumferenceSteps);
 
     for (const csPoint of crossSection) {
       vertices.push(x, csPoint.y, csPoint.z);

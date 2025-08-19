@@ -10,6 +10,10 @@ export function App() {
   const [parameters, setParameters] = useState<HornProfileParameters>({
     throatRadius: 25,
     mouthRadius: 300,
+    throatWidth: 50,
+    throatHeight: 50,
+    mouthWidth: 600,
+    mouthHeight: 600,
     length: 500,
     resolution: 100,
     cutoffFrequency: 100,
@@ -30,7 +34,11 @@ export function App() {
     const hornGeometry: HornGeometry = {
       mode: meshMode,
       profile: profile.points,
+      widthProfile: profile.widthProfile,
+      heightProfile: profile.heightProfile,
       throatRadius: profile.metadata.parameters.throatRadius,
+      width: profile.metadata.parameters.mouthWidth,
+      height: profile.metadata.parameters.mouthHeight,
     };
 
     const mesh = generateHornMesh3D(hornGeometry, {
@@ -127,6 +135,39 @@ export function App() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label
+                    htmlFor="throat-width"
+                    className="block text-sm font-medium text-slate-300 mb-2"
+                  >
+                    Throat Width (mm)
+                  </label>
+                  <input
+                    id="throat-width"
+                    type="number"
+                    value={parameters.throatWidth}
+                    onChange={(e) => handleParameterChange("throatWidth", e.currentTarget.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="throat-height"
+                    className="block text-sm font-medium text-slate-300 mb-2"
+                  >
+                    Throat Height (mm)
+                  </label>
+                  <input
+                    id="throat-height"
+                    type="number"
+                    value={parameters.throatHeight}
+                    onChange={(e) => handleParameterChange("throatHeight", e.currentTarget.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label
                   htmlFor="mouth-radius"
@@ -141,6 +182,39 @@ export function App() {
                   onChange={(e) => handleParameterChange("mouthRadius", e.currentTarget.value)}
                   className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label
+                    htmlFor="mouth-width"
+                    className="block text-sm font-medium text-slate-300 mb-2"
+                  >
+                    Mouth Width (mm)
+                  </label>
+                  <input
+                    id="mouth-width"
+                    type="number"
+                    value={parameters.mouthWidth}
+                    onChange={(e) => handleParameterChange("mouthWidth", e.currentTarget.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="mouth-height"
+                    className="block text-sm font-medium text-slate-300 mb-2"
+                  >
+                    Mouth Height (mm)
+                  </label>
+                  <input
+                    id="mouth-height"
+                    type="number"
+                    value={parameters.mouthHeight}
+                    onChange={(e) => handleParameterChange("mouthHeight", e.currentTarget.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
               </div>
 
               <div>

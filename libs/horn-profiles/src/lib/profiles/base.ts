@@ -60,6 +60,10 @@ export abstract class BaseHornProfile extends HornProfile {
     return {
       throatRadius: params.throatRadius,
       mouthRadius: params.mouthRadius,
+      throatWidth: params.throatWidth ?? params.throatRadius * 2,
+      throatHeight: params.throatHeight ?? params.throatRadius * 2,
+      mouthWidth: params.mouthWidth ?? params.mouthRadius * 2,
+      mouthHeight: params.mouthHeight ?? params.mouthRadius * 2,
       length: params.length,
       resolution: params.resolution ?? BaseHornProfile.DEFAULT_RESOLUTION,
       cutoffFrequency: params.cutoffFrequency ?? BaseHornProfile.DEFAULT_CUTOFF_FREQUENCY,

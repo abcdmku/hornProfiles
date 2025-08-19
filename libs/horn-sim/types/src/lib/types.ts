@@ -11,6 +11,8 @@ export type CrossSectionMode =
 export interface HornGeometry {
   mode: CrossSectionMode;
   profile: ProfileXY; // axial profile
+  widthProfile?: ProfileXY; // separate width profile for non-circular horns
+  heightProfile?: ProfileXY; // separate height profile for non-circular horns
   width?: number; // mm, for non-circular mouths
   height?: number; // mm, for non-circular mouths
   throatRadius: number; // mm
