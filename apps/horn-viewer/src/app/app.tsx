@@ -5,7 +5,7 @@ import { HornViewer3D } from "@horn-sim/viewer-3d";
 import { generateHornMesh3D, meshToThree } from "@horn-sim/mesher";
 import type { HornGeometry } from "@horn-sim/types";
 
-export function App() {
+export function App(): React.JSX.Element {
   const [profileType, setProfileType] = useState("conical");
   const [parameters, setParameters] = useState<HornProfileParameters>({
     throatWidth: 50,
@@ -53,7 +53,7 @@ export function App() {
     return meshToThree(mesh);
   }, [profile, meshMode, meshResolution]);
 
-  const handleParameterChange = (key: keyof HornProfileParameters, value: string) => {
+  const handleParameterChange = (key: keyof HornProfileParameters, value: string): void => {
     const numValue = parseFloat(value) || 0;
 
     setParameters((prev) => {

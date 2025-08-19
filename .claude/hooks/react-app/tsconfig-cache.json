@@ -1,10 +1,10 @@
 {
   "hashes": {
-    "C:\\Users\\cafal\\OneDrive\\Documents\\github\\hornProfiles\\tsconfig.json": "20c32387adc6caca58c0cf3aad8ece68f81d5a653bcd1465fd18b3f64b668dff"
+    "C:\\Users\\MiniBorg\\Documents\\GitHub\\hornProfiles\\tsconfig.json": "92bc52253b4d04cae79b125250f0a4cec2f44c726112c6d68be04c6f747f11c8"
   },
   "mappings": {
     "src/**/*": {
-      "configPath": "C:\\Users\\cafal\\OneDrive\\Documents\\github\\hornProfiles\\tsconfig.json",
+      "configPath": "C:\\Users\\MiniBorg\\Documents\\GitHub\\hornProfiles\\tsconfig.json",
       "excludes": []
     }
   }

@@ -22,7 +22,7 @@ function Mesh({
   indices: Uint32Array;
   normals: Float32Array;
   wireframe: boolean;
-}) {
+}): React.JSX.Element {
   const meshRef = useRef<THREE.Mesh>(null);
 
   const geometry = React.useMemo(() => {

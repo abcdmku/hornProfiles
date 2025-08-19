@@ -16,7 +16,6 @@ export interface HornProfileViewerProps {
   width?: number | string;
   height?: number;
   showGrid?: boolean;
-  strokeColor?: string;
 }
 
 export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
@@ -24,18 +23,32 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
   width = "100%",
   height = 600,
   showGrid = true,
-  strokeColor = "#8884d8",
 }) => {
   // Transform points for Recharts format and round to whole numbers
-  const data = profile.points.map((point) => ({
+  // Combine width and height profiles if they exist
+  const widthData = (profile.widthProfile || profile.points).map((point) => ({
     x: Math.round(point.x),
-    y: Math.round(point.y),
-    "-y": -Math.round(point.y), // Mirror for bottom half
+    widthY: Math.round(point.y),
+    "-widthY": -Math.round(point.y), // Mirror for bottom half
   }));
 
-  // Calculate the data extents
+  const heightData = (profile.heightProfile || profile.points).map((point) => ({
+    x: Math.round(point.x),
+    heightY: Math.round(point.y),
+    "-heightY": -Math.round(point.y), // Mirror for bottom half
+  }));
+
+  // Merge the data arrays by x coordinate
+  const data = widthData.map((wPoint, index) => ({
+    ...wPoint,
+    ...heightData[index],
+  }));
+
+  // Calculate the data extents - check both width and height profiles
   const maxX = Math.max(...data.map((d) => d.x));
-  const maxY = Math.max(...data.map((d) => Math.abs(d.y)));
+  const maxWidthY = Math.max(...data.map((d) => Math.abs(d.widthY)));
+  const maxHeightY = Math.max(...data.map((d) => Math.abs(d.heightY)));
+  const maxY = Math.max(maxWidthY, maxHeightY);
 
   // We need to ensure the entire horn profile fits AND maintain equal scaling
   // Add some padding (10%) to ensure the profile isn't touching the edges
@@ -55,7 +68,7 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
   const yDomain: [number, number] = [-domainSize / 2, domainSize / 2];
 
   // Custom tick formatter to show only whole numbers
-  const formatTick = (value: number) => {
+  const formatTick = (value: number): string => {
     return Math.round(value).toString();
   };
 
@@ -83,7 +96,7 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
             />
           </svg>
-          {profile.metadata.profileType.toUpperCase()} Profile
+          {profile.metadata.profileType.toUpperCase()} Profile - Width & Height
         </h3>
         <div className="flex items-center space-x-2">
           <span className="text-xs text-slate-400 bg-slate-700/30 px-2 py-1 rounded-full">
@@ -133,23 +146,43 @@ export const HornProfileViewer: React.FC<HornProfileViewerProps> = ({
               labelStyle={{ color: "#94A3B8" }}
             />
             <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="line" />
+            {/* Width Profile Lines */}
             <Line
               type="monotone"
-              dataKey="y"
+              dataKey="widthY"
               stroke="#3B82F6"
-              name="Top Profile"
-              strokeWidth={3}
+              name="Width (Top)"
+              strokeWidth={2.5}
               dot={false}
               activeDot={{ r: 6, fill: "#2563EB" }}
             />
             <Line
               type="monotone"
-              dataKey="-y"
-              stroke="#06B6D4"
-              name="Bottom Profile"
-              strokeWidth={3}
+              dataKey="-widthY"
+              stroke="#3B82F6"
+              name="Width (Bottom)"
+              strokeWidth={2.5}
               dot={false}
-              activeDot={{ r: 6, fill: "#0891B2" }}
+              activeDot={{ r: 6, fill: "#2563EB" }}
+            />
+            {/* Height Profile Lines */}
+            <Line
+              type="monotone"
+              dataKey="heightY"
+              stroke="#10B981"
+              name="Height (Top)"
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 6, fill: "#059669" }}
+            />
+            <Line
+              type="monotone"
+              dataKey="-heightY"
+              stroke="#10B981"
+              name="Height (Bottom)"
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 6, fill: "#059669" }}
             />
           </LineChart>
         </ResponsiveContainer>
