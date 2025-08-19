@@ -6,8 +6,55 @@ export class TractrixProfile extends BaseHornProfile {
     this.validateParameters(params);
     const normalizedParams = this.normalizeParameters(params);
 
-    const { throatRadius, mouthRadius, length, resolution } = normalizedParams;
+    const { throatWidth, throatHeight, mouthWidth, mouthHeight, length, resolution } =
+      normalizedParams;
 
+    // Generate width profile
+    const widthProfile = this.generateTractrixCurve(
+      throatWidth / 2,
+      mouthWidth / 2,
+      length,
+      resolution,
+    );
+
+    // Generate height profile
+    const heightProfile = this.generateTractrixCurve(
+      throatHeight / 2,
+      mouthHeight / 2,
+      length,
+      resolution,
+    );
+
+    // Use the average for the primary profile (for compatibility)
+    const points: Point2D[] = [];
+    for (let i = 0; i <= resolution; i++) {
+      const x = widthProfile[i].x;
+      const avgRadius = (widthProfile[i].y + heightProfile[i].y) / 2;
+      points.push({ x, y: avgRadius });
+    }
+
+    return {
+      points,
+      widthProfile,
+      heightProfile,
+      metadata: {
+        profileType: "tractrix",
+        parameters: normalizedParams,
+        calculatedValues: {
+          throatArea: (throatWidth * throatHeight) / 4,
+          mouthArea: (mouthWidth * mouthHeight) / 4,
+          areaExpansion: (mouthWidth * mouthHeight) / (throatWidth * throatHeight),
+        },
+      },
+    };
+  }
+
+  private generateTractrixCurve(
+    throatRadius: number,
+    mouthRadius: number,
+    length: number,
+    resolution: number,
+  ): Point2D[] {
     const points: Point2D[] = [];
 
     // If mouth <= throat, produce straight/near-straight profile
@@ -17,22 +64,7 @@ export class TractrixProfile extends BaseHornProfile {
         const y = throatRadius + (mouthRadius - throatRadius) * (i / resolution);
         points.push({ x, y });
       }
-
-      return {
-        points,
-        metadata: {
-          profileType: "tractrix",
-          parameters: normalizedParams,
-          calculatedValues: {
-            tractrixParameter_a: 0,
-            expansionRatio: mouthRadius / throatRadius,
-            actualMouthRadius: points[points.length - 1].y,
-            throatRadius,
-            hornLength: length,
-            pointCount: points.length,
-          },
-        },
-      };
+      return points;
     }
 
     //
@@ -98,22 +130,6 @@ export class TractrixProfile extends BaseHornProfile {
       }
     }
 
-    const actualMouthRadius = points.length > 0 ? points[points.length - 1].y : mouthRadius;
-
-    return {
-      points,
-      metadata: {
-        profileType: "tractrix",
-        parameters: normalizedParams,
-        calculatedValues: {
-          tractrixParameter_a: a,
-          expansionRatio: mouthRadius / throatRadius,
-          actualMouthRadius: actualMouthRadius,
-          throatRadius,
-          hornLength: length,
-          pointCount: points.length,
-        },
-      },
-    };
+    return points;
   }
 }

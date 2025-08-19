@@ -4,12 +4,10 @@ export interface Point2D {
 }
 
 export interface HornProfileParameters {
-  throatRadius: number; // r0 - Initial radius at throat (mm)
-  mouthRadius: number; // rm - Final radius at mouth (mm)
-  throatWidth?: number; // Initial width at throat (mm) - defaults to throatRadius * 2
-  throatHeight?: number; // Initial height at throat (mm) - defaults to throatRadius * 2
-  mouthWidth?: number; // Final width at mouth (mm) - defaults to mouthRadius * 2
-  mouthHeight?: number; // Final height at mouth (mm) - defaults to mouthRadius * 2
+  throatWidth: number; // Initial width at throat (mm)
+  throatHeight: number; // Initial height at throat (mm)
+  mouthWidth: number; // Final width at mouth (mm)
+  mouthHeight: number; // Final height at mouth (mm)
   length: number; // L - Total horn length (mm)
   resolution?: number; // Number of points to generate (default: 100)
   cutoffFrequency?: number; // fc - Cutoff frequency in Hz

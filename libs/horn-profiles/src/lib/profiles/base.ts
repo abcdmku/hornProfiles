@@ -7,8 +7,10 @@ export abstract class BaseHornProfile extends HornProfile {
 
   getDefaults(): HornProfileParameters {
     return {
-      throatRadius: 25, // 25mm (1 inch)
-      mouthRadius: 300, // 300mm (~12 inches)
+      throatWidth: 50, // 50mm (~2 inches)
+      throatHeight: 50, // 50mm (~2 inches)
+      mouthWidth: 600, // 600mm (~24 inches)
+      mouthHeight: 600, // 600mm (~24 inches)
       length: 500, // 500mm (~20 inches)
       resolution: BaseHornProfile.DEFAULT_RESOLUTION,
       cutoffFrequency: BaseHornProfile.DEFAULT_CUTOFF_FREQUENCY,
@@ -19,16 +21,24 @@ export abstract class BaseHornProfile extends HornProfile {
   validateParameters(params: HornProfileParameters): void {
     const errors: string[] = [];
 
-    if (params.throatRadius <= 0) {
-      errors.push("Throat radius must be positive");
+    if (params.throatWidth <= 0) {
+      errors.push("Throat width must be positive");
     }
 
-    if (params.mouthRadius <= 0) {
-      errors.push("Mouth radius must be positive");
+    if (params.throatHeight <= 0) {
+      errors.push("Throat height must be positive");
     }
 
-    if (params.throatRadius >= params.mouthRadius) {
-      errors.push("Throat radius must be smaller than mouth radius");
+    if (params.mouthWidth <= 0) {
+      errors.push("Mouth width must be positive");
+    }
+
+    if (params.mouthHeight <= 0) {
+      errors.push("Mouth height must be positive");
+    }
+
+    if (params.throatWidth >= params.mouthWidth && params.throatHeight >= params.mouthHeight) {
+      errors.push("Throat dimensions must be smaller than mouth dimensions");
     }
 
     if (params.length <= 0) {
@@ -58,12 +68,10 @@ export abstract class BaseHornProfile extends HornProfile {
 
   protected normalizeParameters(params: HornProfileParameters): Required<HornProfileParameters> {
     return {
-      throatRadius: params.throatRadius,
-      mouthRadius: params.mouthRadius,
-      throatWidth: params.throatWidth ?? params.throatRadius * 2,
-      throatHeight: params.throatHeight ?? params.throatRadius * 2,
-      mouthWidth: params.mouthWidth ?? params.mouthRadius * 2,
-      mouthHeight: params.mouthHeight ?? params.mouthRadius * 2,
+      throatWidth: params.throatWidth,
+      throatHeight: params.throatHeight,
+      mouthWidth: params.mouthWidth,
+      mouthHeight: params.mouthHeight,
       length: params.length,
       resolution: params.resolution ?? BaseHornProfile.DEFAULT_RESOLUTION,
       cutoffFrequency: params.cutoffFrequency ?? BaseHornProfile.DEFAULT_CUTOFF_FREQUENCY,

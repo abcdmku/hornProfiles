@@ -8,8 +8,6 @@ import type { HornGeometry } from "@horn-sim/types";
 export function App() {
   const [profileType, setProfileType] = useState("conical");
   const [parameters, setParameters] = useState<HornProfileParameters>({
-    throatRadius: 25,
-    mouthRadius: 300,
     throatWidth: 50,
     throatHeight: 50,
     mouthWidth: 600,
@@ -19,6 +17,8 @@ export function App() {
     cutoffFrequency: 100,
     speedOfSound: 343.2,
   });
+  const [throatLocked, setThroatLocked] = useState(true);
+  const [mouthLocked, setMouthLocked] = useState(true);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [wireframe, setWireframe] = useState(false);
   const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
@@ -36,7 +36,11 @@ export function App() {
       profile: profile.points,
       widthProfile: profile.widthProfile,
       heightProfile: profile.heightProfile,
-      throatRadius: profile.metadata.parameters.throatRadius,
+      throatRadius:
+        Math.min(
+          profile.metadata.parameters.throatWidth,
+          profile.metadata.parameters.throatHeight,
+        ) / 2,
       width: profile.metadata.parameters.mouthWidth,
       height: profile.metadata.parameters.mouthHeight,
     };
@@ -50,10 +54,38 @@ export function App() {
   }, [profile, meshMode, meshResolution]);
 
   const handleParameterChange = (key: keyof HornProfileParameters, value: string) => {
-    setParameters((prev) => ({
-      ...prev,
-      [key]: parseFloat(value) || 0,
-    }));
+    const numValue = parseFloat(value) || 0;
+
+    setParameters((prev) => {
+      const newParams = { ...prev };
+
+      // Handle aspect ratio locking for throat
+      if (key === "throatWidth" && throatLocked) {
+        const aspectRatio = prev.throatHeight / prev.throatWidth;
+        newParams.throatWidth = numValue;
+        newParams.throatHeight = numValue * aspectRatio;
+      } else if (key === "throatHeight" && throatLocked) {
+        const aspectRatio = prev.throatWidth / prev.throatHeight;
+        newParams.throatHeight = numValue;
+        newParams.throatWidth = numValue * aspectRatio;
+      }
+      // Handle aspect ratio locking for mouth
+      else if (key === "mouthWidth" && mouthLocked) {
+        const aspectRatio = prev.mouthHeight / prev.mouthWidth;
+        newParams.mouthWidth = numValue;
+        newParams.mouthHeight = numValue * aspectRatio;
+      } else if (key === "mouthHeight" && mouthLocked) {
+        const aspectRatio = prev.mouthWidth / prev.mouthHeight;
+        newParams.mouthHeight = numValue;
+        newParams.mouthWidth = numValue * aspectRatio;
+      }
+      // No locking, just update the value
+      else {
+        newParams[key] = numValue;
+      }
+
+      return newParams;
+    });
   };
 
   return (
@@ -120,100 +152,148 @@ export function App() {
               </div>
 
               <div>
-                <label
-                  htmlFor="throat-radius"
-                  className="block text-sm font-medium text-slate-300 mb-2"
-                >
-                  Throat Radius (mm)
-                </label>
-                <input
-                  id="throat-radius"
-                  type="number"
-                  value={parameters.throatRadius}
-                  onChange={(e) => handleParameterChange("throatRadius", e.currentTarget.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label
-                    htmlFor="throat-width"
-                    className="block text-sm font-medium text-slate-300 mb-2"
-                  >
-                    Throat Width (mm)
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-300">
+                    Throat Dimensions (mm)
                   </label>
-                  <input
-                    id="throat-width"
-                    type="number"
-                    value={parameters.throatWidth}
-                    onChange={(e) => handleParameterChange("throatWidth", e.currentTarget.value)}
-                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
+                  <button
+                    onClick={() => setThroatLocked(!throatLocked)}
+                    className={`p-1.5 rounded-lg transition-all ${
+                      throatLocked
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-700/50 text-slate-400 hover:text-slate-200"
+                    }`}
+                    title={throatLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+                  >
+                    {throatLocked ? (
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                        />
+                      </svg>
+                    )}
+                  </button>
                 </div>
-                <div>
-                  <label
-                    htmlFor="throat-height"
-                    className="block text-sm font-medium text-slate-300 mb-2"
-                  >
-                    Throat Height (mm)
-                  </label>
-                  <input
-                    id="throat-height"
-                    type="number"
-                    value={parameters.throatHeight}
-                    onChange={(e) => handleParameterChange("throatHeight", e.currentTarget.value)}
-                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label htmlFor="throat-width" className="block text-xs text-slate-400 mb-1">
+                      Width
+                    </label>
+                    <input
+                      id="throat-width"
+                      type="number"
+                      value={parameters.throatWidth}
+                      onChange={(e) => handleParameterChange("throatWidth", e.currentTarget.value)}
+                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="throat-height" className="block text-xs text-slate-400 mb-1">
+                      Height
+                    </label>
+                    <input
+                      id="throat-height"
+                      type="number"
+                      value={parameters.throatHeight}
+                      onChange={(e) => handleParameterChange("throatHeight", e.currentTarget.value)}
+                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label
-                  htmlFor="mouth-radius"
-                  className="block text-sm font-medium text-slate-300 mb-2"
-                >
-                  Mouth Radius (mm)
-                </label>
-                <input
-                  id="mouth-radius"
-                  type="number"
-                  value={parameters.mouthRadius}
-                  onChange={(e) => handleParameterChange("mouthRadius", e.currentTarget.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label
-                    htmlFor="mouth-width"
-                    className="block text-sm font-medium text-slate-300 mb-2"
-                  >
-                    Mouth Width (mm)
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-300">
+                    Mouth Dimensions (mm)
                   </label>
-                  <input
-                    id="mouth-width"
-                    type="number"
-                    value={parameters.mouthWidth}
-                    onChange={(e) => handleParameterChange("mouthWidth", e.currentTarget.value)}
-                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
+                  <button
+                    onClick={() => setMouthLocked(!mouthLocked)}
+                    className={`p-1.5 rounded-lg transition-all ${
+                      mouthLocked
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-700/50 text-slate-400 hover:text-slate-200"
+                    }`}
+                    title={mouthLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+                  >
+                    {mouthLocked ? (
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                        />
+                      </svg>
+                    )}
+                  </button>
                 </div>
-                <div>
-                  <label
-                    htmlFor="mouth-height"
-                    className="block text-sm font-medium text-slate-300 mb-2"
-                  >
-                    Mouth Height (mm)
-                  </label>
-                  <input
-                    id="mouth-height"
-                    type="number"
-                    value={parameters.mouthHeight}
-                    onChange={(e) => handleParameterChange("mouthHeight", e.currentTarget.value)}
-                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label htmlFor="mouth-width" className="block text-xs text-slate-400 mb-1">
+                      Width
+                    </label>
+                    <input
+                      id="mouth-width"
+                      type="number"
+                      value={parameters.mouthWidth}
+                      onChange={(e) => handleParameterChange("mouthWidth", e.currentTarget.value)}
+                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="mouth-height" className="block text-xs text-slate-400 mb-1">
+                      Height
+                    </label>
+                    <input
+                      id="mouth-height"
+                      type="number"
+                      value={parameters.mouthHeight}
+                      onChange={(e) => handleParameterChange("mouthHeight", e.currentTarget.value)}
+                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
                 </div>
               </div>
 

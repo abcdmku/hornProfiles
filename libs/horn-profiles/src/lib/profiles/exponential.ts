@@ -7,33 +7,50 @@ export class ExponentialProfile extends BaseHornProfile {
     this.validateParameters(params);
     const normalizedParams = this.normalizeParameters(params);
 
-    const { throatRadius, mouthRadius, length, resolution } = normalizedParams;
+    const { throatWidth, throatHeight, mouthWidth, mouthHeight, length, resolution } =
+      normalizedParams;
 
-    // Calculate flare constant to match mouth radius at length L
-    // For radius: r(x) = r0 * exp(m*x/2)
-    // At x = L: rm = r0 * exp(m*L/2)
-    // Therefore: m = (2 * ln(rm/r0)) / L
-    const mAdjusted = (2 * safeLog(mouthRadius / throatRadius)) / length;
+    // Generate width profile with exponential expansion
+    const widthProfile: Point2D[] = [];
+    const widthFlareConstant = (2 * safeLog(mouthWidth / throatWidth)) / length;
 
-    const points: Point2D[] = [];
-
-    // Generate points along the horn profile
-    // Formula: r(x) = r0 * exp(m*x/2)
     for (let i = 0; i <= resolution; i++) {
       const x = (length * i) / resolution;
-      const y = throatRadius * Math.exp((mAdjusted * x) / 2);
-      points.push({ x, y });
+      const y = (throatWidth / 2) * Math.exp((widthFlareConstant * x) / 2);
+      widthProfile.push({ x, y });
+    }
+
+    // Generate height profile with exponential expansion
+    const heightProfile: Point2D[] = [];
+    const heightFlareConstant = (2 * safeLog(mouthHeight / throatHeight)) / length;
+
+    for (let i = 0; i <= resolution; i++) {
+      const x = (length * i) / resolution;
+      const y = (throatHeight / 2) * Math.exp((heightFlareConstant * x) / 2);
+      heightProfile.push({ x, y });
+    }
+
+    // Use the average for the primary profile (for compatibility)
+    const points: Point2D[] = [];
+    for (let i = 0; i <= resolution; i++) {
+      const x = (length * i) / resolution;
+      const avgRadius = (widthProfile[i].y + heightProfile[i].y) / 2;
+      points.push({ x, y: avgRadius });
     }
 
     return {
       points,
+      widthProfile,
+      heightProfile,
       metadata: {
         profileType: "exponential",
         parameters: normalizedParams,
         calculatedValues: {
-          flareConstant: mAdjusted,
-          expansionFactor: Math.exp(mAdjusted),
-          volumeExpansion: (mouthRadius / throatRadius) ** 2,
+          widthFlareConstant,
+          heightFlareConstant,
+          throatArea: (throatWidth * throatHeight) / 4,
+          mouthArea: (mouthWidth * mouthHeight) / 4,
+          areaExpansion: (mouthWidth * mouthHeight) / (throatWidth * throatHeight),
         },
       },
     };
