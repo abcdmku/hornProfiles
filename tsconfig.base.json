@@ -16,8 +16,10 @@
       "@horn-sim/types": ["libs/horn-sim/types/src/index.ts"],
       "@horn-sim/utils/fs": ["libs/utils/fs/src/index.ts"],
       "@horn-sim/utils/hash": ["libs/utils/hash/src/index.ts"],
+      "@horn-sim/viewer-3d": ["libs/viewer-3d/src/index.ts"],
       "horn-profiles": ["libs/horn-profiles/src/index.ts"],
-      "viewer-2d": ["libs/viewer-2d/src/index.ts"]
+      "viewer-2d": ["libs/viewer-2d/src/index.ts"],
+      "viewer-3d": ["libs/viewer-3d/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "dist", "tests"]

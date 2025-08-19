@@ -5,11 +5,10 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "three": "^0.170.0",
-    "@react-three/fiber": "^8.18.0",
-    "@react-three/drei": "^9.117.0",
     "@horn-sim/mesher": "workspace:*",
     "@horn-sim/types": "workspace:*",
-    "horn-profiles": "workspace:*"
+    "@horn-sim/viewer-3d": "workspace:*",
+    "horn-profiles": "workspace:*",
+    "viewer-2d": "workspace:*"
   }
 }

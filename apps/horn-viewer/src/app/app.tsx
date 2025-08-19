@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { generateProfile, HornProfileParameters, getAvailableProfiles } from "horn-profiles";
 import { HornProfileViewer } from "viewer-2d";
-import { HornViewer3D } from "../components/HornViewer3D";
+import { HornViewer3D } from "@horn-sim/viewer-3d";
+import { generateHornMesh3D, meshToThree } from "@horn-sim/mesher";
+import type { HornGeometry } from "@horn-sim/types";
 
 export function App() {
   const [profileType, setProfileType] = useState("conical");
@@ -15,10 +17,29 @@ export function App() {
   });
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [wireframe, setWireframe] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
 
   const profile = generateProfile(profileType, parameters);
   const availableProfiles = getAvailableProfiles();
+
+  // Generate 3D mesh data when profile changes
+  const meshData = useMemo(() => {
+    if (!profile) return null;
+
+    const hornGeometry: HornGeometry = {
+      mode: meshMode,
+      profile: profile.points,
+      throatRadius: profile.metadata.parameters.throatRadius,
+    };
+
+    const mesh = generateHornMesh3D(hornGeometry, {
+      resolution: 50,
+      elementSize: 5,
+    });
+
+    return meshToThree(mesh);
+  }, [profile, meshMode]);
 
   const handleParameterChange = (key: keyof HornProfileParameters, value: string) => {
     setParameters((prev) => ({
@@ -172,6 +193,27 @@ export function App() {
                 <div className="space-y-3 pt-3 border-t border-slate-700/50">
                   <h3 className="text-sm font-medium text-slate-300">3D View Options</h3>
 
+                  <div>
+                    <label
+                      htmlFor="mesh-mode"
+                      className="block text-sm font-medium text-slate-300 mb-2"
+                    >
+                      Cross Section
+                    </label>
+                    <select
+                      id="mesh-mode"
+                      value={meshMode}
+                      onChange={(e) =>
+                        setMeshMode(e.currentTarget.value as "circle" | "ellipse" | "rectangular")
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="circle">Circle</option>
+                      <option value="ellipse">Ellipse</option>
+                      <option value="rectangular">Rectangular</option>
+                    </select>
+                  </div>
+
                   <label className="flex items-center space-x-2 text-sm text-slate-400">
                     <input
                       type="checkbox"
@@ -202,9 +244,9 @@ export function App() {
           </div>
 
           {/* Glass main content */}
-          <div className="flex-1 backdrop-blur-lg bg-slate-800/30 rounded-2xl shadow-2xl p-6 border border-slate-700/30">
+          <div className="flex-1 backdrop-blur-lg bg-slate-800/30 rounded-2xl shadow-2xl p-6 border border-slate-700/30 flex flex-col min-h-0">
             {/* View Mode Tabs */}
-            <div className="flex space-x-2 mb-4">
+            <div className="flex space-x-2 mb-4 flex-shrink-0">
               <button
                 onClick={() => setViewMode("2d")}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -228,15 +270,25 @@ export function App() {
             </div>
 
             {/* View Content */}
-            <div className="h-[calc(100%-3rem)]">
+            <div className="flex-1 min-h-0 relative">
               {viewMode === "2d" ? (
                 <HornProfileViewer profile={profile} height={600} />
+              ) : meshData ? (
+                <div className="absolute inset-0 rounded-lg overflow-hidden">
+                  <HornViewer3D
+                    positions={meshData.positions}
+                    indices={meshData.indices}
+                    normals={meshData.normals}
+                    wireframe={wireframe}
+                    autoRotate={autoRotate}
+                    showGrid={true}
+                    gridPosition={[0, -parameters.throatRadius, 0]}
+                  />
+                </div>
               ) : (
-                <HornViewer3D
-                  profileResult={profile}
-                  wireframe={wireframe}
-                  autoRotate={autoRotate}
-                />
+                <div className="flex items-center justify-center h-full rounded-lg">
+                  <p className="text-gray-500">Generate a profile to view 3D model</p>
+                </div>
               )}
             </div>
           </div>

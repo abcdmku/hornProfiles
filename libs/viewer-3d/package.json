@@ -1,0 +1,22 @@
+{
+  "name": "@horn-sim/viewer-3d",
+  "version": "0.0.1",
+  "main": "../../dist/libs/viewer-3d/index.js",
+  "types": "../../dist/libs/viewer-3d/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "../../dist/libs/viewer-3d/index.mjs",
+      "require": "../../dist/libs/viewer-3d/index.js"
+    }
+  },
+  "dependencies": {
+    "@react-three/drei": "^10",
+    "@react-three/fiber": "^9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.179.0"
+  }
+}

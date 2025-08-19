@@ -153,30 +153,82 @@ function generateCrossSection(
     case "rectangular": {
       const w = width || radius * 2;
       const h = height || radius * 2;
+
+      // We need exactly 'steps' points to match the mesh index generation
+      // Reserve 4 points for corners, distribute the rest along edges
+      const cornersCount = 4;
+      const edgePoints = Math.max(0, steps - cornersCount);
+
+      // Distribute edge points proportionally to edge length
       const perimeter = 2 * (w + h);
-      const stepLength = perimeter / steps;
+      const wRatio = w / perimeter;
+      const hRatio = h / perimeter;
 
-      for (let i = 0; i < steps; i++) {
-        const distance = i * stepLength;
-        let y = 0,
-          z = 0;
+      // Calculate points per edge (excluding corners)
+      const bottomEdgePoints = Math.round(edgePoints * wRatio);
+      const rightEdgePoints = Math.round(edgePoints * hRatio);
+      const topEdgePoints = Math.round(edgePoints * wRatio);
+      const leftEdgePoints = edgePoints - bottomEdgePoints - rightEdgePoints - topEdgePoints;
 
-        if (distance < w) {
-          y = -w / 2 + distance;
-          z = -h / 2;
-        } else if (distance < w + h) {
-          y = w / 2;
-          z = -h / 2 + (distance - w);
-        } else if (distance < 2 * w + h) {
-          y = w / 2 - (distance - w - h);
-          z = h / 2;
-        } else {
-          y = -w / 2;
-          z = h / 2 - (distance - 2 * w - h);
-        }
+      // Bottom-left corner
+      points.push({ y: -w / 2, z: -h / 2 });
 
-        points.push({ y, z });
+      // Bottom edge (excluding corners)
+      for (let i = 1; i <= bottomEdgePoints; i++) {
+        const t = i / (bottomEdgePoints + 1);
+        points.push({
+          y: -w / 2 + t * w,
+          z: -h / 2,
+        });
       }
+
+      // Bottom-right corner
+      points.push({ y: w / 2, z: -h / 2 });
+
+      // Right edge (excluding corners)
+      for (let i = 1; i <= rightEdgePoints; i++) {
+        const t = i / (rightEdgePoints + 1);
+        points.push({
+          y: w / 2,
+          z: -h / 2 + t * h,
+        });
+      }
+
+      // Top-right corner
+      points.push({ y: w / 2, z: h / 2 });
+
+      // Top edge (excluding corners)
+      for (let i = 1; i <= topEdgePoints; i++) {
+        const t = i / (topEdgePoints + 1);
+        points.push({
+          y: w / 2 - t * w,
+          z: h / 2,
+        });
+      }
+
+      // Top-left corner
+      points.push({ y: -w / 2, z: h / 2 });
+
+      // Left edge (excluding corners)
+      for (let i = 1; i <= leftEdgePoints; i++) {
+        const t = i / (leftEdgePoints + 1);
+        points.push({
+          y: -w / 2,
+          z: h / 2 - t * h,
+        });
+      }
+
+      // Ensure we have exactly 'steps' points
+      while (points.length < steps) {
+        // Add a point on the longest edge if we're short
+        points.push({ y: 0, z: -h / 2 });
+      }
+
+      // Trim if we have too many (shouldn't happen with the logic above)
+      while (points.length > steps) {
+        points.pop();
+      }
+
       break;
     }
 
