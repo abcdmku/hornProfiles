@@ -17,7 +17,6 @@ export function App() {
   });
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [wireframe, setWireframe] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(false);
   const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
   const [meshResolution, setMeshResolution] = useState(50);
 
@@ -228,7 +227,7 @@ export function App() {
                         id="mesh-resolution"
                         type="range"
                         min="10"
-                        max="100"
+                        max="250"
                         step="10"
                         value={meshResolution}
                         onChange={(e) => setMeshResolution(Number(e.currentTarget.value))}
@@ -249,16 +248,6 @@ export function App() {
                       className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Wireframe</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2 text-sm text-slate-400">
-                    <input
-                      type="checkbox"
-                      checked={autoRotate}
-                      onChange={(e) => setAutoRotate(e.target.checked)}
-                      className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Auto Rotate</span>
                   </label>
                 </div>
               )}
@@ -307,7 +296,6 @@ export function App() {
                     indices={meshData.indices}
                     normals={meshData.normals}
                     wireframe={wireframe}
-                    autoRotate={autoRotate}
                     showGrid={true}
                     gridPosition={[0, -parameters.throatRadius, 0]}
                   />

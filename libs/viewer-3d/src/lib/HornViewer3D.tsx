@@ -8,7 +8,6 @@ interface HornViewer3DProps {
   indices: Uint32Array;
   normals: Float32Array;
   wireframe?: boolean;
-  autoRotate?: boolean;
   showGrid?: boolean;
   gridPosition?: [number, number, number];
 }
@@ -60,7 +59,6 @@ export const HornViewer3D: React.FC<HornViewer3DProps> = ({
   indices,
   normals,
   wireframe = false,
-  autoRotate = false,
   showGrid = true,
   gridPosition = [0, 0, 0],
 }) => {
@@ -71,13 +69,7 @@ export const HornViewer3D: React.FC<HornViewer3DProps> = ({
       style={{ width: "100%", height: "100%" }}
       gl={{ preserveDrawingBuffer: true }}
     >
-      <OrbitControls
-        enableDamping
-        dampingFactor={0.05}
-        autoRotate={false}
-        enableZoom={true}
-        enablePan={true}
-      />
+      <OrbitControls enableDamping dampingFactor={0.05} enableZoom={true} enablePan={true} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
       <Mesh positions={positions} indices={indices} normals={normals} wireframe={wireframe} />
