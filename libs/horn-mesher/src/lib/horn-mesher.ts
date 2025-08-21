@@ -5,6 +5,7 @@ import type {
   ElmerMeshData,
   HornGeometry,
 } from "@horn-sim/types";
+import { generateDriverMount, generateHornMount, mergeMeshData } from "./mounts";
 
 export interface MeshGenerationOptions {
   resolution: number;
@@ -65,11 +66,21 @@ export function generateHornMesh3D(
 ): MeshData {
   const { mode, profile, widthProfile, heightProfile } = geometry;
 
-  if (mode === "circle" && !widthProfile && !heightProfile) {
+  // Check if we need to use 2D generation for simple circular horns
+  const isSimpleCircular =
+    mode === "circle" &&
+    !widthProfile &&
+    !heightProfile &&
+    !geometry.driverMount?.enabled &&
+    !geometry.hornMount?.enabled;
+  if (isSimpleCircular) {
     return generateHornMesh2D(profile, options);
   }
 
   const { resolution = 50 } = options;
+  const meshes: MeshData[] = [];
+
+  // Generate horn body
   const vertices: number[] = [];
   const indices: number[] = [];
   const normals: number[] = [];
@@ -107,11 +118,58 @@ export function generateHornMesh3D(
     }
   }
 
-  return {
+  const hornMesh: MeshData = {
     vertices: new Float32Array(vertices),
     indices: new Uint32Array(indices),
     normals: new Float32Array(normals),
   };
+
+  meshes.push(hornMesh);
+
+  // Generate driver mount if enabled
+  if (geometry.driverMount?.enabled) {
+    const throatPosition = profile[0].x; // Throat is at the first profile point
+
+    // Get the actual throat shape (first cross-section)
+    const throatWidth = widthProfile ? widthProfile[0].y * 2 : geometry.width || profile[0].y * 2;
+    const throatHeight = heightProfile
+      ? heightProfile[0].y * 2
+      : geometry.height || profile[0].y * 2;
+
+    const driverMountMesh = generateDriverMount(
+      throatPosition,
+      throatWidth,
+      throatHeight,
+      mode,
+      geometry.driverMount,
+      resolution,
+    );
+    meshes.push(driverMountMesh);
+  }
+
+  // Generate horn mount if enabled
+  if (geometry.hornMount?.enabled) {
+    const mouthPosition = profile[profile.length - 1].x; // Mouth is at the last profile point
+    const mouthWidth = geometry.width || profile[profile.length - 1].y * 2;
+    const mouthHeight = geometry.height || profile[profile.length - 1].y * 2;
+
+    const hornMountMesh = generateHornMount(
+      mouthPosition,
+      mouthWidth,
+      mouthHeight,
+      mode,
+      geometry.hornMount,
+      resolution,
+    );
+    meshes.push(hornMountMesh);
+  }
+
+  // If we have multiple meshes, merge them
+  if (meshes.length > 1) {
+    return mergeMeshData(meshes);
+  }
+
+  return hornMesh;
 }
 
 function generateCrossSection(
@@ -119,7 +177,7 @@ function generateCrossSection(
   radius: number,
   width?: number,
   height?: number,
-  steps: number = 50,
+  steps = 50,
 ): Array<{ y: number; z: number }> {
   const points: Array<{ y: number; z: number }> = [];
 

@@ -3,7 +3,7 @@ import { generateProfile, HornProfileParameters, getAvailableProfiles } from "ho
 import { HornProfileViewer } from "viewer-2d";
 import { HornViewer3D } from "@horn-sim/viewer-3d";
 import { generateHornMesh3D, meshToThree } from "@horn-sim/mesher";
-import type { HornGeometry } from "@horn-sim/types";
+import type { HornGeometry, DriverMountConfig, HornMountConfig } from "@horn-sim/types";
 
 export function App(): React.JSX.Element {
   const [profileType, setProfileType] = useState("conical");
@@ -24,6 +24,22 @@ export function App(): React.JSX.Element {
   const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
   const [meshResolution, setMeshResolution] = useState(50);
 
+  // Mount configurations
+  const [driverMount, setDriverMount] = useState<DriverMountConfig>({
+    enabled: false,
+    outerDiameter: 150,
+    boltHoleDiameter: 6,
+    boltCircleDiameter: 120,
+    boltCount: 4,
+  });
+
+  const [hornMount, setHornMount] = useState<HornMountConfig>({
+    enabled: false,
+    widthExtension: 50,
+    boltSpacing: 100,
+    boltHoleDiameter: 8,
+  });
+
   const profile = generateProfile(profileType, parameters);
   const availableProfiles = getAvailableProfiles();
 
@@ -43,6 +59,8 @@ export function App(): React.JSX.Element {
         ) / 2,
       width: profile.metadata.parameters.mouthWidth,
       height: profile.metadata.parameters.mouthHeight,
+      driverMount: driverMount.enabled ? driverMount : undefined,
+      hornMount: hornMount.enabled ? hornMount : undefined,
     };
 
     const mesh = generateHornMesh3D(hornGeometry, {
@@ -51,7 +69,7 @@ export function App(): React.JSX.Element {
     });
 
     return meshToThree(mesh);
-  }, [profile, meshMode, meshResolution]);
+  }, [profile, meshMode, meshResolution, driverMount, hornMount]);
 
   const handleParameterChange = (key: keyof HornProfileParameters, value: string): void => {
     const numValue = parseFloat(value) || 0;
@@ -405,6 +423,186 @@ export function App(): React.JSX.Element {
                   </label>
                 </div>
               )}
+
+              {/* Mount Configuration */}
+              <div className="space-y-3 pt-3 border-t border-slate-700/50">
+                <h3 className="text-sm font-medium text-slate-300">Mount Options</h3>
+
+                {/* Driver Mount */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={driverMount.enabled}
+                      onChange={(e) =>
+                        setDriverMount({ ...driverMount, enabled: e.target.checked })
+                      }
+                      className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Driver Mount (Throat)</span>
+                  </label>
+
+                  {driverMount.enabled && (
+                    <div className="ml-6 space-y-2">
+                      <div>
+                        <label
+                          htmlFor="driver-outer-diameter"
+                          className="block text-xs text-slate-400 mb-1"
+                        >
+                          Outer Diameter (mm)
+                        </label>
+                        <input
+                          id="driver-outer-diameter"
+                          type="number"
+                          value={driverMount.outerDiameter}
+                          onChange={(e) =>
+                            setDriverMount({
+                              ...driverMount,
+                              outerDiameter: Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="driver-bolt-circle"
+                          className="block text-xs text-slate-400 mb-1"
+                        >
+                          Bolt Circle Diameter (mm)
+                        </label>
+                        <input
+                          id="driver-bolt-circle"
+                          type="number"
+                          value={driverMount.boltCircleDiameter}
+                          onChange={(e) =>
+                            setDriverMount({
+                              ...driverMount,
+                              boltCircleDiameter: Number(e.target.value),
+                            })
+                          }
+                          className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label
+                            htmlFor="driver-bolt-count"
+                            className="block text-xs text-slate-400 mb-1"
+                          >
+                            Bolt Count
+                          </label>
+                          <input
+                            id="driver-bolt-count"
+                            type="number"
+                            min="3"
+                            max="12"
+                            value={driverMount.boltCount}
+                            onChange={(e) =>
+                              setDriverMount({ ...driverMount, boltCount: Number(e.target.value) })
+                            }
+                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="driver-bolt-hole"
+                            className="block text-xs text-slate-400 mb-1"
+                          >
+                            Hole Ø (mm)
+                          </label>
+                          <input
+                            id="driver-bolt-hole"
+                            type="number"
+                            value={driverMount.boltHoleDiameter}
+                            onChange={(e) =>
+                              setDriverMount({
+                                ...driverMount,
+                                boltHoleDiameter: Number(e.target.value),
+                              })
+                            }
+                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Horn Mount */}
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 text-sm text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={hornMount.enabled}
+                      onChange={(e) => setHornMount({ ...hornMount, enabled: e.target.checked })}
+                      className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Horn Mount (Mouth)</span>
+                  </label>
+
+                  {hornMount.enabled && (
+                    <div className="ml-6 space-y-2">
+                      <div>
+                        <label
+                          htmlFor="horn-width-ext"
+                          className="block text-xs text-slate-400 mb-1"
+                        >
+                          Width Extension (mm)
+                        </label>
+                        <input
+                          id="horn-width-ext"
+                          type="number"
+                          value={hornMount.widthExtension}
+                          onChange={(e) =>
+                            setHornMount({ ...hornMount, widthExtension: Number(e.target.value) })
+                          }
+                          className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label
+                            htmlFor="horn-bolt-spacing"
+                            className="block text-xs text-slate-400 mb-1"
+                          >
+                            Bolt Spacing (mm)
+                          </label>
+                          <input
+                            id="horn-bolt-spacing"
+                            type="number"
+                            value={hornMount.boltSpacing}
+                            onChange={(e) =>
+                              setHornMount({ ...hornMount, boltSpacing: Number(e.target.value) })
+                            }
+                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="horn-bolt-hole"
+                            className="block text-xs text-slate-400 mb-1"
+                          >
+                            Hole Ø (mm)
+                          </label>
+                          <input
+                            id="horn-bolt-hole"
+                            type="number"
+                            value={hornMount.boltHoleDiameter}
+                            onChange={(e) =>
+                              setHornMount({
+                                ...hornMount,
+                                boltHoleDiameter: Number(e.target.value),
+                              })
+                            }
+                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Glass button */}
               <button className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-800 transform hover:-translate-y-0.5 transition-all duration-200 mt-4">

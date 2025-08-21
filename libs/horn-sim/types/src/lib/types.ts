@@ -8,6 +8,21 @@ export type CrossSectionMode =
   | "rectangular"
   | "stereographic";
 
+export interface DriverMountConfig {
+  enabled: boolean;
+  outerDiameter: number; // mm
+  boltHoleDiameter: number; // mm
+  boltCircleDiameter: number; // mm
+  boltCount: number; // Number of bolts
+}
+
+export interface HornMountConfig {
+  enabled: boolean;
+  widthExtension: number; // mm added to mouth width
+  boltSpacing: number; // max mm between bolts
+  boltHoleDiameter: number; // mm
+}
+
 export interface HornGeometry {
   mode: CrossSectionMode;
   profile: ProfileXY; // axial profile
@@ -16,6 +31,8 @@ export interface HornGeometry {
   width?: number; // mm, for non-circular mouths
   height?: number; // mm, for non-circular mouths
   throatRadius: number; // mm
+  driverMount?: DriverMountConfig;
+  hornMount?: HornMountConfig;
 }
 
 export interface SimulationParams {
