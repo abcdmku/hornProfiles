@@ -127,10 +127,10 @@ export function App(): React.JSX.Element {
           </div>
         </header>
 
-        <div className="flex flex-1 gap-6 p-6">
+        <div className="flex flex-1 gap-6 p-6 h-[calc(100vh-88px)]">
           {/* Glass sidebar */}
-          <div className="w-80 backdrop-blur-lg bg-slate-800/30 rounded-2xl shadow-2xl p-6 border border-slate-700/30">
-            <h2 className="text-xl font-semibold mb-6 text-slate-100 flex items-center">
+          <div className="w-80 backdrop-blur-lg bg-slate-800/30 rounded-2xl shadow-2xl border border-slate-700/30 flex flex-col h-full">
+            <h2 className="text-xl font-semibold p-6 pb-4 text-slate-100 flex items-center flex-shrink-0">
               <svg
                 className="w-5 h-5 mr-2 text-blue-400"
                 fill="none"
@@ -147,467 +147,478 @@ export function App(): React.JSX.Element {
               Configuration
             </h2>
 
-            <div className="space-y-5">
-              <div>
-                <label
-                  htmlFor="profile-type"
-                  className="block text-sm font-medium text-slate-300 mb-2"
-                >
-                  Profile Type
-                </label>
-                <select
-                  id="profile-type"
-                  value={profileType}
-                  onChange={(e) => setProfileType(e.currentTarget.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                >
-                  {availableProfiles.map((type) => (
-                    <option key={type} value={type} className="bg-gray-800">
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-slate-300">
-                    Throat Dimensions (mm)
-                  </label>
-                  <button
-                    onClick={() => setThroatLocked(!throatLocked)}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      throatLocked
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-700/50 text-slate-400 hover:text-slate-200"
-                    }`}
-                    title={throatLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              <div className="space-y-5">
+                <div>
+                  <label
+                    htmlFor="profile-type"
+                    className="block text-sm font-medium text-slate-300 mb-2"
                   >
-                    {throatLocked ? (
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                        />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
-                        />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="throat-width" className="block text-xs text-slate-400 mb-1">
-                      Width
-                    </label>
-                    <input
-                      id="throat-width"
-                      type="number"
-                      value={parameters.throatWidth}
-                      onChange={(e) => handleParameterChange("throatWidth", e.currentTarget.value)}
-                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="throat-height" className="block text-xs text-slate-400 mb-1">
-                      Height
-                    </label>
-                    <input
-                      id="throat-height"
-                      type="number"
-                      value={parameters.throatHeight}
-                      onChange={(e) => handleParameterChange("throatHeight", e.currentTarget.value)}
-                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-slate-300">
-                    Mouth Dimensions (mm)
+                    Profile Type
                   </label>
-                  <button
-                    onClick={() => setMouthLocked(!mouthLocked)}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      mouthLocked
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-700/50 text-slate-400 hover:text-slate-200"
-                    }`}
-                    title={mouthLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+                  <select
+                    id="profile-type"
+                    value={profileType}
+                    onChange={(e) => setProfileType(e.currentTarget.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
-                    {mouthLocked ? (
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                        />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
-                        />
-                      </svg>
-                    )}
-                  </button>
+                    {availableProfiles.map((type) => (
+                      <option key={type} value={type} className="bg-gray-800">
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="mouth-width" className="block text-xs text-slate-400 mb-1">
-                      Width
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-slate-300">
+                      Throat Dimensions (mm)
                     </label>
-                    <input
-                      id="mouth-width"
-                      type="number"
-                      value={parameters.mouthWidth}
-                      onChange={(e) => handleParameterChange("mouthWidth", e.currentTarget.value)}
-                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="mouth-height" className="block text-xs text-slate-400 mb-1">
-                      Height
-                    </label>
-                    <input
-                      id="mouth-height"
-                      type="number"
-                      value={parameters.mouthHeight}
-                      onChange={(e) => handleParameterChange("mouthHeight", e.currentTarget.value)}
-                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="length" className="block text-sm font-medium text-slate-300 mb-2">
-                  Length (mm)
-                </label>
-                <input
-                  id="length"
-                  type="number"
-                  value={parameters.length}
-                  onChange={(e) => handleParameterChange("length", e.currentTarget.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="resolution"
-                  className="block text-sm font-medium text-slate-300 mb-2"
-                >
-                  Resolution
-                </label>
-                <input
-                  id="resolution"
-                  type="number"
-                  value={parameters.resolution}
-                  onChange={(e) => handleParameterChange("resolution", e.currentTarget.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="speed-of-sound"
-                  className="block text-sm font-medium text-slate-300 mb-2"
-                >
-                  Speed of Sound (m/s)
-                </label>
-                <input
-                  id="speed-of-sound"
-                  type="number"
-                  value={parameters.speedOfSound}
-                  onChange={(e) => handleParameterChange("speedOfSound", e.currentTarget.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-
-              {/* 3D View Options */}
-              {viewMode === "3d" && (
-                <div className="space-y-3 pt-3 border-t border-slate-700/50">
-                  <h3 className="text-sm font-medium text-slate-300">3D View Options</h3>
-
-                  <div>
-                    <label
-                      htmlFor="mesh-mode"
-                      className="block text-sm font-medium text-slate-300 mb-2"
+                    <button
+                      onClick={() => setThroatLocked(!throatLocked)}
+                      className={`p-1.5 rounded-lg transition-all ${
+                        throatLocked
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-700/50 text-slate-400 hover:text-slate-200"
+                      }`}
+                      title={throatLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
                     >
-                      Cross Section
-                    </label>
-                    <select
-                      id="mesh-mode"
-                      value={meshMode}
-                      onChange={(e) =>
-                        setMeshMode(e.currentTarget.value as "circle" | "ellipse" | "rectangular")
-                      }
-                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="circle">Circle</option>
-                      <option value="ellipse">Ellipse</option>
-                      <option value="rectangular">Rectangular</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="mesh-resolution"
-                      className="block text-sm font-medium text-slate-300 mb-2"
-                    >
-                      Mesh Quality
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-slate-500">Low</span>
-                      <input
-                        id="mesh-resolution"
-                        type="range"
-                        min="10"
-                        max="250"
-                        step="10"
-                        value={meshResolution}
-                        onChange={(e) => setMeshResolution(Number(e.currentTarget.value))}
-                        className="flex-1 h-2 bg-slate-900/50 rounded-lg appearance-none cursor-pointer"
-                      />
-                      <span className="text-xs text-slate-500">High</span>
-                    </div>
-                    <div className="text-xs text-slate-500 mt-1">
-                      Resolution: {meshResolution} segments
-                    </div>
-                  </div>
-
-                  <label className="flex items-center space-x-2 text-sm text-slate-400">
-                    <input
-                      type="checkbox"
-                      checked={wireframe}
-                      onChange={(e) => setWireframe(e.target.checked)}
-                      className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Wireframe</span>
-                  </label>
-                </div>
-              )}
-
-              {/* Mount Configuration */}
-              <div className="space-y-3 pt-3 border-t border-slate-700/50">
-                <h3 className="text-sm font-medium text-slate-300">Mount Options</h3>
-
-                {/* Driver Mount */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm text-slate-400">
-                    <input
-                      type="checkbox"
-                      checked={driverMount.enabled}
-                      onChange={(e) =>
-                        setDriverMount({ ...driverMount, enabled: e.target.checked })
-                      }
-                      className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Driver Mount (Throat)</span>
-                  </label>
-
-                  {driverMount.enabled && (
-                    <div className="ml-6 space-y-2">
-                      <div>
-                        <label
-                          htmlFor="driver-outer-diameter"
-                          className="block text-xs text-slate-400 mb-1"
+                      {throatLocked ? (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          Outer Diameter (mm)
-                        </label>
-                        <input
-                          id="driver-outer-diameter"
-                          type="number"
-                          value={driverMount.outerDiameter}
-                          onChange={(e) =>
-                            setDriverMount({
-                              ...driverMount,
-                              outerDiameter: Number(e.target.value),
-                            })
-                          }
-                          className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="driver-bolt-circle"
-                          className="block text-xs text-slate-400 mb-1"
-                        >
-                          Bolt Circle Diameter (mm)
-                        </label>
-                        <input
-                          id="driver-bolt-circle"
-                          type="number"
-                          value={driverMount.boltCircleDiameter}
-                          onChange={(e) =>
-                            setDriverMount({
-                              ...driverMount,
-                              boltCircleDiameter: Number(e.target.value),
-                            })
-                          }
-                          className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label
-                            htmlFor="driver-bolt-count"
-                            className="block text-xs text-slate-400 mb-1"
-                          >
-                            Bolt Count
-                          </label>
-                          <input
-                            id="driver-bolt-count"
-                            type="number"
-                            min="3"
-                            max="12"
-                            value={driverMount.boltCount}
-                            onChange={(e) =>
-                              setDriverMount({ ...driverMount, boltCount: Number(e.target.value) })
-                            }
-                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                           />
-                        </div>
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label htmlFor="throat-width" className="block text-xs text-slate-400 mb-1">
+                        Width
+                      </label>
+                      <input
+                        id="throat-width"
+                        type="number"
+                        value={parameters.throatWidth}
+                        onChange={(e) =>
+                          handleParameterChange("throatWidth", e.currentTarget.value)
+                        }
+                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="throat-height" className="block text-xs text-slate-400 mb-1">
+                        Height
+                      </label>
+                      <input
+                        id="throat-height"
+                        type="number"
+                        value={parameters.throatHeight}
+                        onChange={(e) =>
+                          handleParameterChange("throatHeight", e.currentTarget.value)
+                        }
+                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-slate-300">
+                      Mouth Dimensions (mm)
+                    </label>
+                    <button
+                      onClick={() => setMouthLocked(!mouthLocked)}
+                      className={`p-1.5 rounded-lg transition-all ${
+                        mouthLocked
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-700/50 text-slate-400 hover:text-slate-200"
+                      }`}
+                      title={mouthLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+                    >
+                      {mouthLocked ? (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label htmlFor="mouth-width" className="block text-xs text-slate-400 mb-1">
+                        Width
+                      </label>
+                      <input
+                        id="mouth-width"
+                        type="number"
+                        value={parameters.mouthWidth}
+                        onChange={(e) => handleParameterChange("mouthWidth", e.currentTarget.value)}
+                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="mouth-height" className="block text-xs text-slate-400 mb-1">
+                        Height
+                      </label>
+                      <input
+                        id="mouth-height"
+                        type="number"
+                        value={parameters.mouthHeight}
+                        onChange={(e) =>
+                          handleParameterChange("mouthHeight", e.currentTarget.value)
+                        }
+                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="length" className="block text-sm font-medium text-slate-300 mb-2">
+                    Length (mm)
+                  </label>
+                  <input
+                    id="length"
+                    type="number"
+                    value={parameters.length}
+                    onChange={(e) => handleParameterChange("length", e.currentTarget.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="resolution"
+                    className="block text-sm font-medium text-slate-300 mb-2"
+                  >
+                    Resolution
+                  </label>
+                  <input
+                    id="resolution"
+                    type="number"
+                    value={parameters.resolution}
+                    onChange={(e) => handleParameterChange("resolution", e.currentTarget.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="speed-of-sound"
+                    className="block text-sm font-medium text-slate-300 mb-2"
+                  >
+                    Speed of Sound (m/s)
+                  </label>
+                  <input
+                    id="speed-of-sound"
+                    type="number"
+                    value={parameters.speedOfSound}
+                    onChange={(e) => handleParameterChange("speedOfSound", e.currentTarget.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+
+                {/* 3D View Options */}
+                {viewMode === "3d" && (
+                  <div className="space-y-3 pt-3 border-t border-slate-700/50">
+                    <h3 className="text-sm font-medium text-slate-300">3D View Options</h3>
+
+                    <div>
+                      <label
+                        htmlFor="mesh-mode"
+                        className="block text-sm font-medium text-slate-300 mb-2"
+                      >
+                        Cross Section
+                      </label>
+                      <select
+                        id="mesh-mode"
+                        value={meshMode}
+                        onChange={(e) =>
+                          setMeshMode(e.currentTarget.value as "circle" | "ellipse" | "rectangular")
+                        }
+                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      >
+                        <option value="circle">Circle</option>
+                        <option value="ellipse">Ellipse</option>
+                        <option value="rectangular">Rectangular</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="mesh-resolution"
+                        className="block text-sm font-medium text-slate-300 mb-2"
+                      >
+                        Mesh Quality
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-slate-500">Low</span>
+                        <input
+                          id="mesh-resolution"
+                          type="range"
+                          min="10"
+                          max="250"
+                          step="10"
+                          value={meshResolution}
+                          onChange={(e) => setMeshResolution(Number(e.currentTarget.value))}
+                          className="flex-1 h-2 bg-slate-900/50 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="text-xs text-slate-500">High</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        Resolution: {meshResolution} segments
+                      </div>
+                    </div>
+
+                    <label className="flex items-center space-x-2 text-sm text-slate-400">
+                      <input
+                        type="checkbox"
+                        checked={wireframe}
+                        onChange={(e) => setWireframe(e.target.checked)}
+                        className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Wireframe</span>
+                    </label>
+                  </div>
+                )}
+
+                {/* Mount Configuration */}
+                <div className="space-y-3 pt-3 border-t border-slate-700/50">
+                  <h3 className="text-sm font-medium text-slate-300">Mount Options</h3>
+
+                  {/* Driver Mount */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm text-slate-400">
+                      <input
+                        type="checkbox"
+                        checked={driverMount.enabled}
+                        onChange={(e) =>
+                          setDriverMount({ ...driverMount, enabled: e.target.checked })
+                        }
+                        className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Driver Mount (Throat)</span>
+                    </label>
+
+                    {driverMount.enabled && (
+                      <div className="ml-6 space-y-2">
                         <div>
                           <label
-                            htmlFor="driver-bolt-hole"
+                            htmlFor="driver-outer-diameter"
                             className="block text-xs text-slate-400 mb-1"
                           >
-                            Hole Ø (mm)
+                            Outer Diameter (mm)
                           </label>
                           <input
-                            id="driver-bolt-hole"
+                            id="driver-outer-diameter"
                             type="number"
-                            value={driverMount.boltHoleDiameter}
+                            value={driverMount.outerDiameter}
                             onChange={(e) =>
                               setDriverMount({
                                 ...driverMount,
-                                boltHoleDiameter: Number(e.target.value),
+                                outerDiameter: Number(e.target.value),
                               })
-                            }
-                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Horn Mount */}
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm text-slate-400">
-                    <input
-                      type="checkbox"
-                      checked={hornMount.enabled}
-                      onChange={(e) => setHornMount({ ...hornMount, enabled: e.target.checked })}
-                      className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Horn Mount (Mouth)</span>
-                  </label>
-
-                  {hornMount.enabled && (
-                    <div className="ml-6 space-y-2">
-                      <div>
-                        <label
-                          htmlFor="horn-width-ext"
-                          className="block text-xs text-slate-400 mb-1"
-                        >
-                          Width Extension (mm)
-                        </label>
-                        <input
-                          id="horn-width-ext"
-                          type="number"
-                          value={hornMount.widthExtension}
-                          onChange={(e) =>
-                            setHornMount({ ...hornMount, widthExtension: Number(e.target.value) })
-                          }
-                          className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label
-                            htmlFor="horn-bolt-spacing"
-                            className="block text-xs text-slate-400 mb-1"
-                          >
-                            Bolt Spacing (mm)
-                          </label>
-                          <input
-                            id="horn-bolt-spacing"
-                            type="number"
-                            value={hornMount.boltSpacing}
-                            onChange={(e) =>
-                              setHornMount({ ...hornMount, boltSpacing: Number(e.target.value) })
                             }
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
                         </div>
                         <div>
                           <label
-                            htmlFor="horn-bolt-hole"
+                            htmlFor="driver-bolt-circle"
                             className="block text-xs text-slate-400 mb-1"
                           >
-                            Hole Ø (mm)
+                            Bolt Circle Diameter (mm)
                           </label>
                           <input
-                            id="horn-bolt-hole"
+                            id="driver-bolt-circle"
                             type="number"
-                            value={hornMount.boltHoleDiameter}
+                            value={driverMount.boltCircleDiameter}
                             onChange={(e) =>
-                              setHornMount({
-                                ...hornMount,
-                                boltHoleDiameter: Number(e.target.value),
+                              setDriverMount({
+                                ...driverMount,
+                                boltCircleDiameter: Number(e.target.value),
                               })
                             }
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
                         </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label
+                              htmlFor="driver-bolt-count"
+                              className="block text-xs text-slate-400 mb-1"
+                            >
+                              Bolt Count
+                            </label>
+                            <input
+                              id="driver-bolt-count"
+                              type="number"
+                              min="3"
+                              max="12"
+                              value={driverMount.boltCount}
+                              onChange={(e) =>
+                                setDriverMount({
+                                  ...driverMount,
+                                  boltCount: Number(e.target.value),
+                                })
+                              }
+                              className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor="driver-bolt-hole"
+                              className="block text-xs text-slate-400 mb-1"
+                            >
+                              Hole Ø (mm)
+                            </label>
+                            <input
+                              id="driver-bolt-hole"
+                              type="number"
+                              value={driverMount.boltHoleDiameter}
+                              onChange={(e) =>
+                                setDriverMount({
+                                  ...driverMount,
+                                  boltHoleDiameter: Number(e.target.value),
+                                })
+                              }
+                              className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  {/* Horn Mount */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm text-slate-400">
+                      <input
+                        type="checkbox"
+                        checked={hornMount.enabled}
+                        onChange={(e) => setHornMount({ ...hornMount, enabled: e.target.checked })}
+                        className="rounded border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Horn Mount (Mouth)</span>
+                    </label>
+
+                    {hornMount.enabled && (
+                      <div className="ml-6 space-y-2">
+                        <div>
+                          <label
+                            htmlFor="horn-width-ext"
+                            className="block text-xs text-slate-400 mb-1"
+                          >
+                            Width Extension (mm)
+                          </label>
+                          <input
+                            id="horn-width-ext"
+                            type="number"
+                            value={hornMount.widthExtension}
+                            onChange={(e) =>
+                              setHornMount({ ...hornMount, widthExtension: Number(e.target.value) })
+                            }
+                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label
+                              htmlFor="horn-bolt-spacing"
+                              className="block text-xs text-slate-400 mb-1"
+                            >
+                              Bolt Spacing (mm)
+                            </label>
+                            <input
+                              id="horn-bolt-spacing"
+                              type="number"
+                              value={hornMount.boltSpacing}
+                              onChange={(e) =>
+                                setHornMount({ ...hornMount, boltSpacing: Number(e.target.value) })
+                              }
+                              className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor="horn-bolt-hole"
+                              className="block text-xs text-slate-400 mb-1"
+                            >
+                              Hole Ø (mm)
+                            </label>
+                            <input
+                              id="horn-bolt-hole"
+                              type="number"
+                              value={hornMount.boltHoleDiameter}
+                              onChange={(e) =>
+                                setHornMount({
+                                  ...hornMount,
+                                  boltHoleDiameter: Number(e.target.value),
+                                })
+                              }
+                              className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Glass button */}
+                <button className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-800 transform hover:-translate-y-0.5 transition-all duration-200 mt-4">
+                  Generate Profile
+                </button>
               </div>
-
-              {/* Glass button */}
-              <button className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-800 transform hover:-translate-y-0.5 transition-all duration-200 mt-4">
-                Generate Profile
-              </button>
             </div>
           </div>
 
