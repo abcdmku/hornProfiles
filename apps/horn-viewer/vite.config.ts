@@ -16,6 +16,10 @@ export default defineConfig(() => ({
     host: "localhost",
   },
   plugins: [react(), nxViteTsPaths(), nxCopyAssetsPlugin(["*.md"])],
+  // Define global for browser compatibility with poly2tri
+  define: {
+    global: "globalThis",
+  },
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [ nxViteTsPaths() ],

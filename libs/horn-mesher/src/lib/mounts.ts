@@ -4,6 +4,36 @@ import type {
   DriverMountConfig,
   HornMountConfig,
 } from "@horn-sim/types";
+import * as poly2tri from "poly2tri";
+
+/**
+ * Remove duplicate consecutive points from a polygon
+ */
+function removeDuplicatePoints(points: poly2tri.Point[]): poly2tri.Point[] {
+  if (points.length === 0) return points;
+
+  const filtered: poly2tri.Point[] = [points[0]];
+
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    // Check if points are different (with small epsilon for floating point comparison)
+    if (Math.abs(prev.x - curr.x) > 1e-10 || Math.abs(prev.y - curr.y) > 1e-10) {
+      filtered.push(curr);
+    }
+  }
+
+  // Also check if the last point equals the first (closing duplicate)
+  if (filtered.length > 1) {
+    const first = filtered[0];
+    const last = filtered[filtered.length - 1];
+    if (Math.abs(first.x - last.x) < 1e-10 && Math.abs(first.y - last.y) < 1e-10) {
+      filtered.pop();
+    }
+  }
+
+  return filtered;
+}
 
 /**
  * Generate a driver mount (circular flange with throat-shaped inner hole)
@@ -16,148 +46,109 @@ export function generateDriverMount(
   config: DriverMountConfig,
   resolution: number,
 ): MeshData {
-  const vertices: number[] = [];
-  const indices: number[] = [];
-  const normals: number[] = [];
+  // Step 1: Generate 2D points for outer boundary (circular flange)
+  const outerRadius = config.outerDiameter / 2;
+  let outerContour: poly2tri.Point[] = [];
+  const numOuterPoints = resolution * 2; // Higher resolution for outer edge
 
-  // Generate inner edge (throat shape)
-  const innerPoints = generateCrossSectionPoints(
+  for (let i = 0; i < numOuterPoints; i++) {
+    const angle = (i / numOuterPoints) * 2 * Math.PI;
+    outerContour.push(
+      new poly2tri.Point(outerRadius * Math.cos(angle), outerRadius * Math.sin(angle)),
+    );
+  }
+
+  // Remove any duplicate points
+  outerContour = removeDuplicatePoints(outerContour);
+
+  // Step 2: Create SweepContext with outer boundary
+  const sweepContext = new poly2tri.SweepContext(outerContour);
+
+  // Step 3: Add throat opening as a hole
+  let throatHole: poly2tri.Point[] = [];
+  const throatPoints = generateCrossSectionPoints(
     throatMode,
     throatWidth / 2,
     throatHeight / 2,
     resolution,
   );
 
-  // Generate outer edge (always circular)
-  const outerRadius = config.outerDiameter / 2;
-  const outerPoints: Array<{ y: number; z: number }> = [];
-  for (let i = 0; i < resolution; i++) {
-    const angle = (i / resolution) * 2 * Math.PI;
-    outerPoints.push({
-      y: outerRadius * Math.cos(angle),
-      z: outerRadius * Math.sin(angle),
-    });
+  for (const point of throatPoints) {
+    throatHole.push(new poly2tri.Point(point.y, point.z));
   }
 
-  // Calculate bolt hole positions
+  // Remove any duplicate points
+  throatHole = removeDuplicatePoints(throatHole);
+
+  // IMPORTANT: Reverse hole points for correct winding order
+  throatHole.reverse();
+  sweepContext.addHole(throatHole);
+
+  // Step 4: Add bolt holes
   const boltCircleRadius = config.boltCircleDiameter / 2;
   const boltHoleRadius = config.boltHoleDiameter / 2;
-  const boltHoles: Array<{ y: number; z: number }> = [];
 
   for (let i = 0; i < config.boltCount; i++) {
     const angle = (i / config.boltCount) * 2 * Math.PI;
-    boltHoles.push({
-      y: boltCircleRadius * Math.cos(angle),
-      z: boltCircleRadius * Math.sin(angle),
-    });
+    const centerY = boltCircleRadius * Math.cos(angle);
+    const centerZ = boltCircleRadius * Math.sin(angle);
+
+    let boltHole: poly2tri.Point[] = [];
+    const holeResolution = 16; // Points per hole
+
+    for (let j = 0; j < holeResolution; j++) {
+      const holeAngle = (j / holeResolution) * 2 * Math.PI;
+      boltHole.push(
+        new poly2tri.Point(
+          centerY + boltHoleRadius * Math.cos(holeAngle),
+          centerZ + boltHoleRadius * Math.sin(holeAngle),
+        ),
+      );
+    }
+    // Remove any duplicate points
+    boltHole = removeDuplicatePoints(boltHole);
+    // IMPORTANT: Reverse hole points for correct winding order
+    boltHole.reverse();
+    if (boltHole.length >= 3) {
+      // Only add hole if it has at least 3 points
+      sweepContext.addHole(boltHole);
+    }
   }
 
-  // Build vertex arrays with hole boundaries
+  // Step 5: Triangulate
+  try {
+    sweepContext.triangulate();
+  } catch (error) {
+    // Fallback to simple mesh without holes if triangulation fails
+    return createFallbackMesh(throatPosition, outerRadius, resolution);
+  }
+
+  const triangles = sweepContext.getTriangles();
+
+  // Step 6: Convert to MeshData format
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+  const pointMap = new Map<string, number>();
   let vertexIndex = 0;
 
-  // Add inner edge vertices (throat shape)
-  const innerStartIndex = vertexIndex;
-  for (const point of innerPoints) {
-    vertices.push(throatPosition, point.y, point.z);
-    normals.push(1, 0, 0);
-    vertexIndex++;
-  }
+  for (const triangle of triangles) {
+    const points = triangle.getPoints();
 
-  // Add outer edge vertices
-  const outerStartIndex = vertexIndex;
-  for (const point of outerPoints) {
-    vertices.push(throatPosition, point.y, point.z);
-    normals.push(1, 0, 0);
-    vertexIndex++;
-  }
+    for (const point of points) {
+      const key = `${point.x},${point.y}`;
 
-  // Add vertices around each bolt hole
-  const holeStartIndices: number[] = [];
-  const holeVerticesPerHole = 16; // Resolution for each hole
-
-  for (const hole of boltHoles) {
-    holeStartIndices.push(vertexIndex);
-    for (let i = 0; i < holeVerticesPerHole; i++) {
-      const angle = (i / holeVerticesPerHole) * 2 * Math.PI;
-      vertices.push(
-        throatPosition,
-        hole.y + boltHoleRadius * Math.cos(angle),
-        hole.z + boltHoleRadius * Math.sin(angle),
-      );
-      normals.push(1, 0, 0);
-      vertexIndex++;
-    }
-  }
-
-  // Create proper triangulation that connects edges to hole boundaries
-  // We need to create a mesh that goes: inner edge -> around holes -> outer edge
-
-  // For each segment around the perimeter, check if it intersects a hole
-  for (let i = 0; i < resolution; i++) {
-    const nextI = (i + 1) % resolution;
-
-    // Current segment vertices
-    const inner1 = innerStartIndex + i;
-    const inner2 = innerStartIndex + nextI;
-    const outer1 = outerStartIndex + i;
-    const outer2 = outerStartIndex + nextI;
-
-    // Get angles for this segment
-    const angle1 = (i / resolution) * 2 * Math.PI;
-    const angle2 = ((i + 1) / resolution) * 2 * Math.PI;
-
-    // Check each hole to see if it's in this angular segment
-    let holeInSegment = -1;
-    for (let h = 0; h < boltHoles.length; h++) {
-      const holeAngle = Math.atan2(boltHoles[h].z, boltHoles[h].y);
-      const normalizedHoleAngle = holeAngle < 0 ? holeAngle + 2 * Math.PI : holeAngle;
-
-      // Check if hole is in this angular segment
-      if (angle2 > angle1) {
-        if (normalizedHoleAngle >= angle1 && normalizedHoleAngle <= angle2) {
-          holeInSegment = h;
-          break;
-        }
-      } else {
-        // Segment wraps around 0
-        if (normalizedHoleAngle >= angle1 || normalizedHoleAngle <= angle2) {
-          holeInSegment = h;
-          break;
-        }
-      }
-    }
-
-    if (holeInSegment >= 0) {
-      // This segment contains a hole - connect around it
-      const holeStart = holeStartIndices[holeInSegment];
-
-      // Connect inner edge to hole edge (going around the hole)
-      for (let hv = 0; hv < holeVerticesPerHole; hv++) {
-        const holeVertex = holeStart + hv;
-        const nextHoleVertex = holeStart + ((hv + 1) % holeVerticesPerHole);
-        const hvAngle = (hv / holeVerticesPerHole) * 2 * Math.PI;
-
-        // Connect from inner edge to hole on the "left" side
-        if (hvAngle >= Math.PI) {
-          indices.push(inner1, holeVertex, nextHoleVertex);
-        }
-
-        // Connect from hole to outer edge on the "right" side
-        if (hvAngle < Math.PI) {
-          indices.push(holeVertex, outer1, nextHoleVertex);
-          if (hv === 0) {
-            indices.push(nextHoleVertex, outer1, outer2);
-          }
-        }
+      if (!pointMap.has(key)) {
+        vertices.push(throatPosition, point.x, point.y);
+        normals.push(1, 0, 0); // Normal pointing in +X direction
+        pointMap.set(key, vertexIndex);
+        vertexIndex++;
       }
 
-      // Connect the corners
-      indices.push(inner1, holeStart + Math.floor(holeVerticesPerHole * 0.5), inner2);
-      indices.push(holeStart, outer1, holeStart + Math.floor(holeVerticesPerHole * 0.75));
-    } else {
-      // No hole in this segment - simple quad between inner and outer
-      indices.push(inner1, outer1, inner2);
-      indices.push(inner2, outer1, outer2);
+      const index = pointMap.get(key);
+      if (index !== undefined) {
+        indices.push(index);
+      }
     }
   }
 
@@ -179,11 +170,28 @@ export function generateHornMount(
   config: HornMountConfig,
   resolution: number,
 ): MeshData {
-  const vertices: number[] = [];
-  const indices: number[] = [];
-  const normals: number[] = [];
+  // Step 1: Generate outer boundary (mouth shape + extension)
+  const extensionFactor = 1 + config.widthExtension / Math.max(mouthWidth, mouthHeight);
+  const outerPoints = generateCrossSectionPoints(
+    mouthMode,
+    (mouthWidth / 2) * extensionFactor,
+    (mouthHeight / 2) * extensionFactor,
+    resolution * 2, // Higher resolution for better triangulation
+  );
 
-  // Generate inner edge (mouth shape)
+  let outerContour: poly2tri.Point[] = [];
+  for (const point of outerPoints) {
+    outerContour.push(new poly2tri.Point(point.y, point.z));
+  }
+
+  // Remove any duplicate points
+  outerContour = removeDuplicatePoints(outerContour);
+
+  // Step 2: Create SweepContext
+  const sweepContext = new poly2tri.SweepContext(outerContour);
+
+  // Step 3: Add mouth opening as a hole
+  let mouthHole: poly2tri.Point[] = [];
   const innerPoints = generateCrossSectionPoints(
     mouthMode,
     mouthWidth / 2,
@@ -191,202 +199,98 @@ export function generateHornMount(
     resolution,
   );
 
-  // Generate outer edge (mouth shape + extension)
-  const extensionFactor = 1 + config.widthExtension / Math.max(mouthWidth, mouthHeight);
-  const outerPoints = generateCrossSectionPoints(
-    mouthMode,
-    (mouthWidth / 2) * extensionFactor,
-    (mouthHeight / 2) * extensionFactor,
-    resolution,
-  );
+  for (const point of innerPoints) {
+    mouthHole.push(new poly2tri.Point(point.y, point.z));
+  }
 
-  // Calculate bolt hole positions along the perimeter
+  // Remove any duplicate points
+  mouthHole = removeDuplicatePoints(mouthHole);
+
+  mouthHole.reverse(); // Correct winding order
+  sweepContext.addHole(mouthHole);
+
+  // Step 4: Calculate and add bolt holes
   const perimeter = calculatePerimeter(outerPoints);
   const boltCount = Math.max(4, Math.ceil(perimeter / config.boltSpacing));
   const boltHoleRadius = config.boltHoleDiameter / 2;
 
-  // Place bolts evenly between inner and outer edges
-  const boltHoles: Array<{ y: number; z: number }> = [];
-
+  // Place bolts between inner and outer edges
   for (let b = 0; b < boltCount; b++) {
-    const angle = (b / boltCount) * 2 * Math.PI;
+    // Calculate bolt position based on mode
+    let centerY: number, centerZ: number;
 
-    // For circular/elliptical, use radial placement
     if (mouthMode === "circle" || mouthMode === "ellipse") {
-      // Place holes midway between inner and outer radii
-      const innerR = Math.sqrt(
-        innerPoints[0].y * innerPoints[0].y + innerPoints[0].z * innerPoints[0].z,
-      );
-      const outerR = Math.sqrt(
-        outerPoints[0].y * outerPoints[0].y + outerPoints[0].z * outerPoints[0].z,
-      );
-      const midR = (innerR + outerR) / 2;
+      // Radial placement - midway between inner and outer
+      const innerPoint = innerPoints[Math.floor((b / boltCount) * innerPoints.length)];
+      const outerPoint = outerPoints[Math.floor((b / boltCount) * outerPoints.length)];
 
-      boltHoles.push({
-        y: midR * Math.cos(angle),
-        z: midR * Math.sin(angle),
-      });
+      centerY = (innerPoint.y + outerPoint.y) / 2;
+      centerZ = (innerPoint.z + outerPoint.z) / 2;
     } else {
-      // For rectangular, place along the perimeter
-      const segmentLength = perimeter / boltCount;
-      const targetDistance = b * segmentLength;
+      // For rectangular, interpolate between inner and outer
+      const innerIdx = Math.floor((b / boltCount) * innerPoints.length);
+      const outerIdx = Math.floor((b / boltCount) * outerPoints.length);
 
-      let currentDistance = 0;
-      for (let i = 0; i < outerPoints.length; i++) {
-        const p1 = outerPoints[i];
-        const p2 = outerPoints[(i + 1) % outerPoints.length];
-        const segDist = Math.sqrt((p2.y - p1.y) ** 2 + (p2.z - p1.z) ** 2);
+      centerY = (innerPoints[innerIdx].y + outerPoints[outerIdx].y) / 2;
+      centerZ = (innerPoints[innerIdx].z + outerPoints[outerIdx].z) / 2;
+    }
 
-        if (currentDistance + segDist >= targetDistance) {
-          const t = (targetDistance - currentDistance) / segDist;
-          const midPoint = {
-            y: p1.y + (p2.y - p1.y) * t,
-            z: p1.z + (p2.z - p1.z) * t,
-          };
+    // Create bolt hole
+    let boltHole: poly2tri.Point[] = [];
+    const holeResolution = 16;
 
-          // Move bolt slightly inward
-          const scale = 0.7; // Place at 70% of the distance from center
-          boltHoles.push({
-            y: midPoint.y * scale,
-            z: midPoint.z * scale,
-          });
-          break;
-        }
-        currentDistance += segDist;
-      }
+    for (let j = 0; j < holeResolution; j++) {
+      const holeAngle = (j / holeResolution) * 2 * Math.PI;
+      boltHole.push(
+        new poly2tri.Point(
+          centerY + boltHoleRadius * Math.cos(holeAngle),
+          centerZ + boltHoleRadius * Math.sin(holeAngle),
+        ),
+      );
+    }
+    // Remove any duplicate points
+    boltHole = removeDuplicatePoints(boltHole);
+    boltHole.reverse();
+    if (boltHole.length >= 3) {
+      // Only add hole if it has at least 3 points
+      sweepContext.addHole(boltHole);
     }
   }
 
-  // Build vertex arrays
+  // Step 5: Triangulate and convert to MeshData
+  try {
+    sweepContext.triangulate();
+  } catch (error) {
+    // Fallback to simple mesh without holes if triangulation fails
+    return createFallbackMeshForHorn(mouthPosition, outerPoints, innerPoints);
+  }
+
+  const triangles = sweepContext.getTriangles();
+
+  // Convert triangles to MeshData (same as driver mount)
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+  const pointMap = new Map<string, number>();
   let vertexIndex = 0;
 
-  // Add inner edge vertices
-  const innerStartIndex = vertexIndex;
-  for (const point of innerPoints) {
-    vertices.push(mouthPosition, point.y, point.z);
-    normals.push(1, 0, 0);
-    vertexIndex++;
-  }
+  for (const triangle of triangles) {
+    const points = triangle.getPoints();
 
-  // Add outer edge vertices
-  const outerStartIndex = vertexIndex;
-  for (const point of outerPoints) {
-    vertices.push(mouthPosition, point.y, point.z);
-    normals.push(1, 0, 0);
-    vertexIndex++;
-  }
+    for (const point of points) {
+      const key = `${point.x},${point.y}`;
 
-  // Add vertices around each bolt hole
-  const holeStartIndices: number[] = [];
-  const holeVerticesPerHole = 16;
-
-  for (const hole of boltHoles) {
-    holeStartIndices.push(vertexIndex);
-    for (let i = 0; i < holeVerticesPerHole; i++) {
-      const angle = (i / holeVerticesPerHole) * 2 * Math.PI;
-      vertices.push(
-        mouthPosition,
-        hole.y + boltHoleRadius * Math.cos(angle),
-        hole.z + boltHoleRadius * Math.sin(angle),
-      );
-      normals.push(1, 0, 0);
-      vertexIndex++;
-    }
-  }
-
-  // Create triangulation connecting inner to outer while avoiding holes
-  // Use a different strategy: for each hole, connect it to nearby vertices
-
-  // First, create the base mesh between inner and outer edges
-  for (let i = 0; i < resolution; i++) {
-    const nextI = (i + 1) % resolution;
-
-    const inner1 = innerStartIndex + i;
-    const inner2 = innerStartIndex + nextI;
-    const outer1 = outerStartIndex + i;
-    const outer2 = outerStartIndex + nextI;
-
-    // Check if this quad would intersect any hole
-    const quadCenter = {
-      y:
-        (vertices[inner1 * 3 + 1] +
-          vertices[outer1 * 3 + 1] +
-          vertices[inner2 * 3 + 1] +
-          vertices[outer2 * 3 + 1]) /
-        4,
-      z:
-        (vertices[inner1 * 3 + 2] +
-          vertices[outer1 * 3 + 2] +
-          vertices[inner2 * 3 + 2] +
-          vertices[outer2 * 3 + 2]) /
-        4,
-    };
-
-    let nearestHole = -1;
-    let minDist = Infinity;
-
-    for (let h = 0; h < boltHoles.length; h++) {
-      const dist = Math.sqrt(
-        (quadCenter.y - boltHoles[h].y) ** 2 + (quadCenter.z - boltHoles[h].z) ** 2,
-      );
-
-      if (dist < boltHoleRadius * 3 && dist < minDist) {
-        nearestHole = h;
-        minDist = dist;
-      }
-    }
-
-    if (nearestHole >= 0) {
-      // This quad is near a hole - connect around it
-      const holeStart = holeStartIndices[nearestHole];
-
-      // Connect vertices to hole boundary
-      // Determine which quadrant each vertex is in relative to the hole
-      const holeCenter = boltHoles[nearestHole];
-
-      for (let hv = 0; hv < holeVerticesPerHole; hv++) {
-        const holeVertex = holeStart + hv;
-        const nextHoleVertex = holeStart + ((hv + 1) % holeVerticesPerHole);
-
-        // Get angle of this hole vertex
-        const hvY = vertices[holeVertex * 3 + 1];
-        const hvZ = vertices[holeVertex * 3 + 2];
-        const hvAngle = Math.atan2(hvZ - holeCenter.z, hvY - holeCenter.y);
-        const normalizedAngle = hvAngle < 0 ? hvAngle + 2 * Math.PI : hvAngle;
-
-        // Connect to appropriate quad vertices based on angle
-        if (normalizedAngle < Math.PI / 2) {
-          // Top-right quadrant - connect to outer2
-          if (hv < holeVerticesPerHole / 4) {
-            indices.push(outer2, holeVertex, nextHoleVertex);
-          }
-        } else if (normalizedAngle < Math.PI) {
-          // Top-left quadrant - connect to inner2
-          if (hv >= holeVerticesPerHole / 4 && hv < holeVerticesPerHole / 2) {
-            indices.push(inner2, holeVertex, nextHoleVertex);
-          }
-        } else if (normalizedAngle < (3 * Math.PI) / 2) {
-          // Bottom-left quadrant - connect to inner1
-          if (hv >= holeVerticesPerHole / 2 && hv < (3 * holeVerticesPerHole) / 4) {
-            indices.push(inner1, holeVertex, nextHoleVertex);
-          }
-        } else {
-          // Bottom-right quadrant - connect to outer1
-          if (hv >= (3 * holeVerticesPerHole) / 4) {
-            indices.push(outer1, holeVertex, nextHoleVertex);
-          }
-        }
+      if (!pointMap.has(key)) {
+        vertices.push(mouthPosition, point.x, point.y);
+        normals.push(1, 0, 0);
+        pointMap.set(key, vertexIndex);
+        vertexIndex++;
       }
 
-      // Add corner triangles to complete the mesh around the hole
-      indices.push(inner1, outer1, holeStart + holeVerticesPerHole - 1);
-      indices.push(inner2, holeStart + holeVerticesPerHole / 2 - 1, outer2);
-      indices.push(outer1, holeStart + holeVerticesPerHole / 4 - 1, outer2);
-      indices.push(inner1, holeStart + (3 * holeVerticesPerHole) / 4 - 1, inner2);
-    } else {
-      // No hole nearby - create normal quad
-      indices.push(inner1, outer1, inner2);
-      indices.push(inner2, outer1, outer2);
+      const index = pointMap.get(key);
+      if (index !== undefined) {
+        indices.push(index);
+      }
     }
   }
 
@@ -434,9 +338,10 @@ function generateCrossSectionPoints(
     case "rectangular": {
       // Create a rectangle with points distributed along edges
       const pointsPerSide = Math.floor(resolution / 4);
+      const remainingPoints = resolution - pointsPerSide * 4;
 
-      // Bottom edge
-      for (let i = 0; i <= pointsPerSide; i++) {
+      // Bottom edge (don't include the last point to avoid duplicate with right edge)
+      for (let i = 0; i < pointsPerSide; i++) {
         const t = i / pointsPerSide;
         points.push({
           y: -halfWidth + t * 2 * halfWidth,
@@ -444,8 +349,8 @@ function generateCrossSectionPoints(
         });
       }
 
-      // Right edge
-      for (let i = 1; i <= pointsPerSide; i++) {
+      // Right edge (don't include the last point to avoid duplicate with top edge)
+      for (let i = 0; i < pointsPerSide; i++) {
         const t = i / pointsPerSide;
         points.push({
           y: halfWidth,
@@ -453,8 +358,8 @@ function generateCrossSectionPoints(
         });
       }
 
-      // Top edge
-      for (let i = 1; i <= pointsPerSide; i++) {
+      // Top edge (don't include the last point to avoid duplicate with left edge)
+      for (let i = 0; i < pointsPerSide; i++) {
         const t = i / pointsPerSide;
         points.push({
           y: halfWidth - t * 2 * halfWidth,
@@ -462,21 +367,13 @@ function generateCrossSectionPoints(
         });
       }
 
-      // Left edge
-      for (let i = 1; i < pointsPerSide; i++) {
-        const t = i / pointsPerSide;
+      // Left edge (don't include the last point to avoid duplicate with bottom edge start)
+      for (let i = 0; i < pointsPerSide + remainingPoints; i++) {
+        const t = i / (pointsPerSide + remainingPoints);
         points.push({
           y: -halfWidth,
           z: halfHeight - t * 2 * halfHeight,
         });
-      }
-
-      // Ensure we have exactly 'resolution' points
-      while (points.length < resolution) {
-        points.push(points[points.length - 1]);
-      }
-      while (points.length > resolution) {
-        points.pop();
       }
 
       break;
@@ -500,6 +397,85 @@ function calculatePerimeter(points: Array<{ y: number; z: number }>): number {
     perimeter += Math.sqrt((p2.y - p1.y) ** 2 + (p2.z - p1.z) ** 2);
   }
   return perimeter;
+}
+
+/**
+ * Create a simple fallback mesh for driver mount without holes
+ */
+function createFallbackMesh(position: number, radius: number, resolution: number): MeshData {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+
+  // Center vertex
+  vertices.push(position, 0, 0);
+  normals.push(1, 0, 0);
+
+  // Perimeter vertices
+  for (let i = 0; i < resolution; i++) {
+    const angle = (i / resolution) * 2 * Math.PI;
+    vertices.push(position, radius * Math.cos(angle), radius * Math.sin(angle));
+    normals.push(1, 0, 0);
+  }
+
+  // Create triangles
+  for (let i = 0; i < resolution; i++) {
+    indices.push(0, i + 1, ((i + 1) % resolution) + 1);
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+    normals: new Float32Array(normals),
+  };
+}
+
+/**
+ * Create a simple fallback mesh for horn mount without holes
+ */
+function createFallbackMeshForHorn(
+  position: number,
+  outerPoints: Array<{ y: number; z: number }>,
+  innerPoints: Array<{ y: number; z: number }>,
+): MeshData {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+
+  // Add inner vertices
+  const innerStartIdx = 0;
+  for (const point of innerPoints) {
+    vertices.push(position, point.y, point.z);
+    normals.push(1, 0, 0);
+  }
+
+  // Add outer vertices
+  const outerStartIdx = innerPoints.length;
+  for (const point of outerPoints) {
+    vertices.push(position, point.y, point.z);
+    normals.push(1, 0, 0);
+  }
+
+  // Create simple quad triangulation between inner and outer
+  const innerCount = innerPoints.length;
+  const outerCount = outerPoints.length;
+  const maxCount = Math.max(innerCount, outerCount);
+
+  for (let i = 0; i < maxCount; i++) {
+    const innerIdx1 = innerStartIdx + (i % innerCount);
+    const innerIdx2 = innerStartIdx + ((i + 1) % innerCount);
+    const outerIdx1 = outerStartIdx + (i % outerCount);
+    const outerIdx2 = outerStartIdx + ((i + 1) % outerCount);
+
+    indices.push(innerIdx1, outerIdx1, innerIdx2);
+    indices.push(innerIdx2, outerIdx1, outerIdx2);
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+    normals: new Float32Array(normals),
+  };
 }
 
 /**

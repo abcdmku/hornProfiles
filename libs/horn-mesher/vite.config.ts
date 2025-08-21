@@ -17,6 +17,10 @@ export default defineConfig(() => ({
       pathsToAliases: false,
     }),
   ],
+  // Define global for browser compatibility with poly2tri
+  define: {
+    global: "globalThis",
+  },
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [ nxViteTsPaths() ],
