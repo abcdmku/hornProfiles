@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Grid } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 
 interface HornViewer3DProps {
@@ -73,20 +73,7 @@ export const HornViewer3D: React.FC<HornViewer3DProps> = ({
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
       <Mesh positions={positions} indices={indices} normals={normals} wireframe={wireframe} />
-      {showGrid && (
-        <Grid
-          args={[10000, 10000]}
-          cellSize={10}
-          cellThickness={0.5}
-          cellColor="#303047"
-          sectionSize={100}
-          sectionThickness={1}
-          sectionColor="#3d3e58"
-          fadeDistance={3000}
-          fadeStrength={1}
-          position={gridPosition}
-        />
-      )}
+      {showGrid && <gridHelper args={[1000, 100]} position={gridPosition} />}
     </Canvas>
   );
 };
