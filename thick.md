@@ -1,0 +1,1 @@
+ when adding thickness to the wall the mounts move away from the horn and remain surfaces. maybe we can add controls to add thickness to those as well. although i would prefer to keep the horn and mounts one mesh and adjust wall thickness all at once. implement which ever is simpler.

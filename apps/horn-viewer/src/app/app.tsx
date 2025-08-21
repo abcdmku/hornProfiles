@@ -23,6 +23,7 @@ export function App(): React.JSX.Element {
   const [wireframe, setWireframe] = useState(false);
   const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
   const [meshResolution, setMeshResolution] = useState(50);
+  const [thickness, setThickness] = useState(0);
 
   // Mount configurations
   const [driverMount, setDriverMount] = useState<DriverMountConfig>({
@@ -66,10 +67,11 @@ export function App(): React.JSX.Element {
     const mesh = generateHornMesh3D(hornGeometry, {
       resolution: meshResolution,
       elementSize: 5, // This parameter is not used in the current implementation
+      thickness,
     });
 
     return meshToThree(mesh);
-  }, [profile, meshMode, meshResolution, driverMount, hornMount]);
+  }, [profile, meshMode, meshResolution, driverMount, hornMount, thickness]);
 
   const handleParameterChange = (key: keyof HornProfileParameters, value: string): void => {
     const numValue = parseFloat(value) || 0;
@@ -417,6 +419,30 @@ export function App(): React.JSX.Element {
                       <div className="text-xs text-slate-500 mt-1">
                         Resolution: {meshResolution} segments
                       </div>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="wall-thickness"
+                        className="block text-sm font-medium text-slate-300 mb-2"
+                      >
+                        Wall Thickness (mm)
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-slate-500">0</span>
+                        <input
+                          id="wall-thickness"
+                          type="range"
+                          min="0"
+                          max="20"
+                          step="0.5"
+                          value={thickness}
+                          onChange={(e) => setThickness(Number(e.currentTarget.value))}
+                          className="flex-1 h-2 bg-slate-900/50 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="text-xs text-slate-500">20</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">Thickness: {thickness} mm</div>
                     </div>
 
                     <label className="flex items-center space-x-2 text-sm text-slate-400">
