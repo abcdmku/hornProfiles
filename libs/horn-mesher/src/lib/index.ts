@@ -1,8 +1,22 @@
-// Main mount generation functions
+// Main horn mesh generation functions
+export { generateHornMesh, generateHornMesh2D, generateHornMesh3D } from "./horn-mesher";
+
+// Mesh converters
+export { meshToThree, meshToGmsh, meshToElmer } from "./mesh-converters";
+
+// Types
+export type {
+  MeshGenerationOptions,
+  CrossSectionPoint,
+  ThreeMeshData,
+  MeshConverter,
+} from "./types";
+
+// Mount generation functions
 export { generateDriverMount, generateHornMount, mergeMeshData } from "./mounts";
 
 // Cross-section generation
-export { generateCrossSectionPoints } from "./cross-section";
+export { generateCrossSectionPoints, generateCrossSection } from "./cross-section";
 
 // Point utilities
 export type { Point2D } from "./point-utils";

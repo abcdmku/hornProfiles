@@ -1,5 +1,6 @@
 import type { CrossSectionMode } from "@horn-sim/types";
 import type { Point2D } from "./point-utils";
+import type { CrossSectionPoint } from "./types";
 import { TWO_PI } from "./constants";
 
 /**
@@ -18,6 +19,8 @@ export function generateCrossSectionPoints(
       return generateEllipsePoints(halfWidth, halfHeight, resolution);
     case "rectangular":
       return generateRectanglePoints(halfWidth, halfHeight, resolution);
+    case "superellipse":
+      return generateSuperellipsePoints(halfWidth, halfHeight, resolution);
     default:
       throw new Error(`Unsupported cross-section mode: ${mode}`);
   }
@@ -110,4 +113,46 @@ function generateRectanglePoints(
   }
 
   return points;
+}
+
+/**
+ * Generate points for a superellipse cross-section
+ */
+function generateSuperellipsePoints(
+  halfWidth: number,
+  halfHeight: number,
+  resolution: number,
+): Point2D[] {
+  const points: Point2D[] = [];
+  const n = 2.5; // Superellipse parameter
+
+  for (let i = 0; i < resolution; i++) {
+    const theta = (i / resolution) * TWO_PI;
+    const cosTheta = Math.cos(theta);
+    const sinTheta = Math.sin(theta);
+
+    const x = halfWidth * Math.sign(cosTheta) * Math.pow(Math.abs(cosTheta), 2 / n);
+    const y = halfHeight * Math.sign(sinTheta) * Math.pow(Math.abs(sinTheta), 2 / n);
+
+    points.push({ y: x, z: y });
+  }
+
+  return points;
+}
+
+/**
+ * Generate cross-section for mesh vertices
+ * This version is optimized for 3D mesh generation
+ */
+export function generateCrossSection(
+  mode: CrossSectionMode,
+  radius: number,
+  width?: number,
+  height?: number,
+  steps = 50,
+): CrossSectionPoint[] {
+  const halfWidth = width ? width / 2 : radius;
+  const halfHeight = height ? height / 2 : radius;
+  const points = generateCrossSectionPoints(mode, halfWidth, halfHeight, steps);
+  return points as CrossSectionPoint[];
 }
