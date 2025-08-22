@@ -15,8 +15,8 @@ describe("Horn Mesh 3D - Mount Integration", () => {
     throatRadius: 25,
   };
 
-  describe("Offset-based profile redefinition", () => {
-    it("should shift horn start when driver mount is present", () => {
+  describe("Mount positioning and profile trimming", () => {
+    it("should keep driver mount at original position and trim horn profile", () => {
       const geometry: HornGeometry = {
         ...baseGeometry,
         driverMount: {
@@ -37,11 +37,12 @@ describe("Horn Mesh 3D - Mount Integration", () => {
         minX = Math.min(minX, mesh.vertices[i]);
       }
 
-      // Horn should start at offset position (10mm)
-      expect(minX).toBeCloseTo(10, 1);
+      // Mount should remain at original position (0mm)
+      // The horn body is trimmed but mount stays at throat
+      expect(minX).toBeCloseTo(0, 1);
     });
 
-    it("should shift horn end when horn mount is present", () => {
+    it("should keep horn mount at original position and trim horn profile", () => {
       const geometry: HornGeometry = {
         ...baseGeometry,
         hornMount: {
@@ -61,8 +62,9 @@ describe("Horn Mesh 3D - Mount Integration", () => {
         maxX = Math.max(maxX, mesh.vertices[i]);
       }
 
-      // Horn should end at offset position (200 - 15 = 185mm)
-      expect(maxX).toBeCloseTo(185, 1);
+      // Mount should remain at original position (200mm)
+      // The horn body is trimmed but mount stays at mouth
+      expect(maxX).toBeCloseTo(200, 1);
     });
 
     it("should handle both driver and horn mounts", () => {
@@ -94,8 +96,9 @@ describe("Horn Mesh 3D - Mount Integration", () => {
         maxX = Math.max(maxX, mesh.vertices[i]);
       }
 
-      expect(minX).toBeCloseTo(10, 1);
-      expect(maxX).toBeCloseTo(185, 1);
+      // Mounts remain at original positions
+      expect(minX).toBeCloseTo(0, 1);
+      expect(maxX).toBeCloseTo(200, 1);
     });
   });
 
@@ -281,7 +284,7 @@ describe("Horn Mesh 3D - Mount Integration", () => {
         minX = Math.min(minX, mesh.vertices[i]);
       }
 
-      // Horn should start at original position (0mm)
+      // Mount should remain at original position (0mm)
       expect(minX).toBeCloseTo(0, 1);
     });
   });

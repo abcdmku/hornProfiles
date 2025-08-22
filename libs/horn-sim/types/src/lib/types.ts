@@ -38,6 +38,7 @@ export interface HornGeometry {
   width?: number; // mm, for non-circular mouths
   height?: number; // mm, for non-circular mouths
   throatRadius: number; // mm
+  wallThickness?: number; // mm - horn wall thickness
   driverMount?: DriverMountConfig;
   hornMount?: HornMountConfig;
 }

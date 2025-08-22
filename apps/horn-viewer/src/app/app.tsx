@@ -23,6 +23,7 @@ export function App(): React.JSX.Element {
   const [wireframe, setWireframe] = useState(false);
   const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
   const [meshResolution, setMeshResolution] = useState(50);
+  const [wallThickness, setWallThickness] = useState(0);
 
   // Mount configurations
   const [driverMount, setDriverMount] = useState<DriverMountConfig>({
@@ -61,6 +62,7 @@ export function App(): React.JSX.Element {
         ) / 2,
       width: profile.metadata.parameters.mouthWidth,
       height: profile.metadata.parameters.mouthHeight,
+      wallThickness: wallThickness > 0 ? wallThickness : undefined,
       driverMount: driverMount.enabled ? driverMount : undefined,
       hornMount: hornMount.enabled ? hornMount : undefined,
     };
@@ -71,7 +73,7 @@ export function App(): React.JSX.Element {
     });
 
     return meshToThree(mesh);
-  }, [profile, meshMode, meshResolution, driverMount, hornMount]);
+  }, [profile, meshMode, meshResolution, wallThickness, driverMount, hornMount]);
 
   const handleParameterChange = (key: keyof HornProfileParameters, value: string): void => {
     const numValue = parseFloat(value) || 0;
@@ -418,6 +420,30 @@ export function App(): React.JSX.Element {
                       </div>
                       <div className="text-xs text-slate-500 mt-1">
                         Resolution: {meshResolution} segments
+                      </div>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="wall-thickness"
+                        className="block text-sm font-medium text-slate-300 mb-2"
+                      >
+                        Wall Thickness (mm)
+                      </label>
+                      <input
+                        id="wall-thickness"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={wallThickness}
+                        onChange={(e) => setWallThickness(Number(e.currentTarget.value))}
+                        className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                        placeholder="0 for solid horn"
+                      />
+                      <div className="text-xs text-slate-500 mt-1">
+                        {wallThickness > 0
+                          ? `Double-walled: ${wallThickness}mm thick`
+                          : "Solid horn (no wall thickness)"}
                       </div>
                     </div>
 
