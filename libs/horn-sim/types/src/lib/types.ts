@@ -14,6 +14,7 @@ export interface DriverMountConfig {
   boltHoleDiameter: number; // mm
   boltCircleDiameter: number; // mm
   boltCount: number; // Number of bolts
+  thickness: number; // mm - mount thickness/offset from throat
 }
 
 export interface HornMountConfig {
@@ -21,6 +22,12 @@ export interface HornMountConfig {
   widthExtension: number; // mm added to mouth width
   boltSpacing: number; // max mm between bolts
   boltHoleDiameter: number; // mm
+  thickness: number; // mm - mount thickness/offset from mouth
+}
+
+export interface MountOffsets {
+  driverMountOffset?: number; // Distance from throat
+  hornMountOffset?: number; // Distance from mouth
 }
 
 export interface HornGeometry {

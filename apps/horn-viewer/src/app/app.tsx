@@ -31,6 +31,7 @@ export function App(): React.JSX.Element {
     boltHoleDiameter: 6,
     boltCircleDiameter: 120,
     boltCount: 4,
+    thickness: 10,
   });
 
   const [hornMount, setHornMount] = useState<HornMountConfig>({
@@ -38,6 +39,7 @@ export function App(): React.JSX.Element {
     widthExtension: 50,
     boltSpacing: 100,
     boltHoleDiameter: 8,
+    thickness: 10,
   });
 
   const profile = generateProfile(profileType, parameters);
@@ -473,6 +475,26 @@ export function App(): React.JSX.Element {
                         </div>
                         <div>
                           <label
+                            htmlFor="driver-thickness"
+                            className="block text-xs text-slate-400 mb-1"
+                          >
+                            Mount Thickness (mm)
+                          </label>
+                          <input
+                            id="driver-thickness"
+                            type="number"
+                            value={driverMount.thickness}
+                            onChange={(e) =>
+                              setDriverMount({
+                                ...driverMount,
+                                thickness: Number(e.target.value),
+                              })
+                            }
+                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label
                             htmlFor="driver-bolt-circle"
                             className="block text-xs text-slate-400 mb-1"
                           >
@@ -566,6 +588,23 @@ export function App(): React.JSX.Element {
                             value={hornMount.widthExtension}
                             onChange={(e) =>
                               setHornMount({ ...hornMount, widthExtension: Number(e.target.value) })
+                            }
+                            className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="horn-thickness"
+                            className="block text-xs text-slate-400 mb-1"
+                          >
+                            Mount Thickness (mm)
+                          </label>
+                          <input
+                            id="horn-thickness"
+                            type="number"
+                            value={hornMount.thickness}
+                            onChange={(e) =>
+                              setHornMount({ ...hornMount, thickness: Number(e.target.value) })
                             }
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />

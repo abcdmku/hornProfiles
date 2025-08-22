@@ -134,3 +134,102 @@ export function mergeMeshData(meshes: MeshData[]): MeshData {
     normals: mergedNormals,
   };
 }
+
+/**
+ * Find a matching vertex within tolerance
+ */
+export function findMatchingVertex(
+  vertices: Float32Array,
+  x: number,
+  y: number,
+  z: number,
+  tolerance = 0.001,
+): number {
+  for (let i = 0; i < vertices.length; i += 3) {
+    const dx = Math.abs(vertices[i] - x);
+    const dy = Math.abs(vertices[i + 1] - y);
+    const dz = Math.abs(vertices[i + 2] - z);
+
+    if (dx < tolerance && dy < tolerance && dz < tolerance) {
+      return i / 3; // Return vertex index
+    }
+  }
+  return -1; // No match found
+}
+
+/**
+ * Weld vertices at a specific interface plane
+ */
+export function weldVerticesAtInterface(
+  bodyVertices: Float32Array,
+  mountVertices: Float32Array,
+  interfaceX: number,
+  tolerance = 0.001,
+): { vertices: Float32Array; indexMap: Map<number, number> } {
+  const mergedVertices: number[] = [];
+  const indexMap = new Map<number, number>();
+
+  // Add all body vertices
+  for (let i = 0; i < bodyVertices.length; i += 3) {
+    mergedVertices.push(bodyVertices[i], bodyVertices[i + 1], bodyVertices[i + 2]);
+  }
+
+  // Add mount vertices, welding those at interface
+  for (let i = 0; i < mountVertices.length; i += 3) {
+    const x = mountVertices[i];
+    const y = mountVertices[i + 1];
+    const z = mountVertices[i + 2];
+
+    if (Math.abs(x - interfaceX) < tolerance) {
+      // Find matching body vertex at interface
+      const matchIndex = findMatchingVertex(bodyVertices, x, y, z, tolerance);
+      if (matchIndex !== -1) {
+        indexMap.set(i / 3, matchIndex);
+        continue; // Skip adding duplicate vertex
+      }
+    }
+
+    // Add new vertex
+    indexMap.set(i / 3, mergedVertices.length / 3);
+    mergedVertices.push(x, y, z);
+  }
+
+  return {
+    vertices: new Float32Array(mergedVertices),
+    indexMap,
+  };
+}
+
+/**
+ * Create watertight mesh by welding vertices between multiple meshes
+ */
+export function createWatertightMesh(
+  meshes: MeshData[],
+  _interfaces: number[] = [],
+  _tolerance = 0.001,
+): MeshData {
+  if (meshes.length === 0) {
+    return {
+      vertices: new Float32Array(0),
+      indices: new Uint32Array(0),
+      normals: new Float32Array(0),
+    };
+  }
+
+  if (meshes.length === 1) {
+    return meshes[0];
+  }
+
+  // Merge all meshes first
+  const mergedMesh = mergeMeshData(meshes);
+
+  // TODO: Implement proper vertex welding at interfaces
+  // For now, return the merged mesh as-is
+  // A proper implementation would:
+  // 1. Find duplicate vertices at interfaces
+  // 2. Merge them
+  // 3. Update indices accordingly
+  // 4. Merge normals for welded vertices
+
+  return mergedMesh;
+}

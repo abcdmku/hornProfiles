@@ -23,7 +23,22 @@ export type { Point2D } from "./point-utils";
 export { removeDuplicatePoints, toPolyPoints, calculatePerimeter } from "./point-utils";
 
 // Mesh utilities
-export { createFallbackMesh, createFallbackMeshForHorn } from "./mesh-utils";
+export {
+  createFallbackMesh,
+  createFallbackMeshForHorn,
+  findMatchingVertex,
+  weldVerticesAtInterface,
+  createWatertightMesh,
+} from "./mesh-utils";
+
+// Profile utilities
+export {
+  calculateEffectiveProfile,
+  interpolateProfileAt,
+  trimProfileAtStart,
+  trimProfileAtEnd,
+  calculateDimensionsAt,
+} from "./profile-utils";
 
 // Triangulation utilities
 export type { TriangulationResult } from "./triangulation";

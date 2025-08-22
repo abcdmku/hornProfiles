@@ -87,7 +87,9 @@
       "Bash(pnpm --filter @horn-sim/mesher build)",
       "Bash(timeout 10 pnpm --filter @horn-sim/horn-viewer dev)",
       "Bash(timeout 15 npx nx serve horn-viewer)",
-      "Bash(npx nx reset:*)"
+      "Bash(npx nx reset:*)",
+      "Bash(timeout 15 pnpm dev:web)",
+      "Bash(pnpm --filter horn-viewer dev)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
