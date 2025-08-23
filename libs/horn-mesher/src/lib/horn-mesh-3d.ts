@@ -3,7 +3,7 @@ import type { MeshGenerationOptions } from "./types";
 import { generateCrossSection } from "./cross-section";
 import { generateDriverMount, generateHornMount } from "./mounts";
 import { mergeMeshData } from "./mesh-utils";
-import { calculateEffectiveProfile, calculateDimensionsAt } from "./profile-utils";
+import { calculateDimensionsAt, trimProfileAtStart, trimProfileAtEnd } from "./profile-utils";
 
 /**
  * Generate a 3D horn mesh with support for various cross-sections and integrated mounts
@@ -14,15 +14,17 @@ export function generateHornMesh3D(
 ): MeshData {
   const { resolution = 50 } = options;
 
-  // Calculate effective profile with mount offsets
-  const { profile: effectiveProfile, offsets } = calculateEffectiveProfile(
-    geometry.profile,
-    geometry.driverMount,
-    geometry.hornMount,
-  );
+  // Calculate mount offsets (but don't trim the profile)
+  const offsets: MountOffsets = {};
+  if (geometry.driverMount?.enabled && geometry.driverMount.thickness > 0) {
+    offsets.driverMountOffset = geometry.driverMount.thickness;
+  }
+  if (geometry.hornMount?.enabled && geometry.hornMount.thickness > 0) {
+    offsets.hornMountOffset = geometry.hornMount.thickness;
+  }
 
-  // Generate integrated horn body with mounts
-  return generateIntegratedHornBody(geometry, effectiveProfile, offsets, resolution);
+  // Generate integrated horn body with mounts using ORIGINAL profile
+  return generateIntegratedHornBody(geometry, geometry.profile, offsets, resolution);
 }
 
 /**
@@ -30,7 +32,7 @@ export function generateHornMesh3D(
  */
 function generateIntegratedHornBody(
   geometry: HornGeometry,
-  effectiveProfile: ProfileXY,
+  originalProfile: ProfileXY,
   offsets: MountOffsets,
   resolution: number,
 ): MeshData {
@@ -117,13 +119,13 @@ function generateIntegratedHornBody(
   if (hasWallThickness && geometry.wallThickness) {
     const doubleWalledMesh = generateDoubleWalledHornBody(
       geometry,
-      effectiveProfile,
+      originalProfile,
       geometry.wallThickness,
       resolution,
     );
     meshes.push(doubleWalledMesh);
   } else {
-    const hornBodyMesh = generateHornBodyMesh(geometry, effectiveProfile, resolution);
+    const hornBodyMesh = generateHornBodyMesh(geometry, originalProfile, resolution);
     meshes.push(hornBodyMesh);
   }
 
@@ -210,11 +212,11 @@ function generateIntegratedHornBody(
 /**
  * Generate double-walled horn body with specified wall thickness
  * Creates two separate horn surfaces (inner and outer) that are open at throat/mouth
- * The inner surface follows the design profile, outer surface is expanded by wall thickness
+ * The inner surface follows the full design profile, outer surface is expanded and trimmed
  */
 function generateDoubleWalledHornBody(
   geometry: HornGeometry,
-  effectiveProfile: ProfileXY,
+  originalProfile: ProfileXY,
   wallThickness: number,
   resolution: number,
 ): MeshData {
@@ -223,17 +225,27 @@ function generateDoubleWalledHornBody(
   const indices: number[] = [];
   const normals: number[] = [];
 
-  const circumferenceSteps = resolution;
-  const profileSteps = effectiveProfile.length;
+  // Calculate trimmed profile for outer surface based on mount offsets
+  let outerProfile = [...originalProfile];
+  if (geometry.driverMount?.enabled && geometry.driverMount.thickness > 0) {
+    outerProfile = trimProfileAtStart(outerProfile, geometry.driverMount.thickness);
+  }
+  if (geometry.hornMount?.enabled && geometry.hornMount.thickness > 0) {
+    outerProfile = trimProfileAtEnd(outerProfile, geometry.hornMount.thickness);
+  }
 
-  // Generate inner wall vertices (the actual horn profile - acoustic surface)
-  for (let i = 0; i < profileSteps; i++) {
-    const point = effectiveProfile[i];
+  const circumferenceSteps = resolution;
+  const innerProfileSteps = originalProfile.length;
+  const outerProfileSteps = outerProfile.length;
+
+  // Generate inner wall vertices (the actual horn profile - acoustic surface, FULL LENGTH)
+  for (let i = 0; i < innerProfileSteps; i++) {
+    const point = originalProfile[i];
     const x = point.x;
 
     // Calculate dimensions at this profile position
     const { width, height } = calculateDimensionsAt(
-      effectiveProfile,
+      originalProfile,
       widthProfile,
       heightProfile,
       x,
@@ -259,16 +271,16 @@ function generateDoubleWalledHornBody(
     }
   }
 
-  // Generate outer wall vertices (expanded by wall thickness)
+  // Generate outer wall vertices (expanded by wall thickness and TRIMMED)
   // This creates the external surface of the horn wall
-  const outerStartIdx = profileSteps * circumferenceSteps;
-  for (let i = 0; i < profileSteps; i++) {
-    const point = effectiveProfile[i];
+  const outerStartIdx = innerProfileSteps * circumferenceSteps;
+  for (let i = 0; i < outerProfileSteps; i++) {
+    const point = outerProfile[i];
     const x = point.x;
 
     // Calculate dimensions at this profile position
     const { width, height } = calculateDimensionsAt(
-      effectiveProfile,
+      outerProfile,
       widthProfile,
       heightProfile,
       x,
@@ -303,7 +315,7 @@ function generateDoubleWalledHornBody(
   }
 
   // Generate triangle indices for inner wall (the acoustic surface - reversed winding for inward normals)
-  for (let i = 0; i < profileSteps - 1; i++) {
+  for (let i = 0; i < innerProfileSteps - 1; i++) {
     for (let j = 0; j < circumferenceSteps; j++) {
       const a = i * circumferenceSteps + j;
       const b = i * circumferenceSteps + ((j + 1) % circumferenceSteps);
@@ -315,8 +327,8 @@ function generateDoubleWalledHornBody(
     }
   }
 
-  // Generate triangle indices for outer wall (expanded surface)
-  for (let i = 0; i < profileSteps - 1; i++) {
+  // Generate triangle indices for outer wall (expanded and trimmed surface)
+  for (let i = 0; i < outerProfileSteps - 1; i++) {
     for (let j = 0; j < circumferenceSteps; j++) {
       const a = outerStartIdx + i * circumferenceSteps + j;
       const b = outerStartIdx + i * circumferenceSteps + ((j + 1) % circumferenceSteps);
@@ -333,8 +345,26 @@ function generateDoubleWalledHornBody(
   if (!geometry.driverMount?.enabled) {
     connectWalls(
       indices,
-      0, // Inner wall throat (acoustic surface)
-      outerStartIdx, // Outer wall throat (expanded surface)
+      0, // Inner wall throat (acoustic surface at original position)
+      outerStartIdx, // Outer wall throat (starts at trimmed position)
+      circumferenceSteps,
+      false, // Throat end
+    );
+  } else if (geometry.driverMount.thickness > 0) {
+    // When driver mount has thickness, connect at the offset position
+    // Find the inner surface index at the offset position
+    const offsetX = originalProfile[0].x + geometry.driverMount.thickness;
+    let innerOffsetIdx = 0;
+    for (let i = 0; i < innerProfileSteps; i++) {
+      if (originalProfile[i].x >= offsetX) {
+        innerOffsetIdx = i * circumferenceSteps;
+        break;
+      }
+    }
+    connectWalls(
+      indices,
+      innerOffsetIdx, // Inner wall at offset position
+      outerStartIdx, // Outer wall starts at trimmed position
       circumferenceSteps,
       false, // Throat end
     );
@@ -345,8 +375,26 @@ function generateDoubleWalledHornBody(
   if (!geometry.hornMount?.enabled) {
     connectWalls(
       indices,
-      (profileSteps - 1) * circumferenceSteps, // Inner wall mouth
-      outerStartIdx + (profileSteps - 1) * circumferenceSteps, // Outer wall mouth
+      (innerProfileSteps - 1) * circumferenceSteps, // Inner wall mouth at original position
+      outerStartIdx + (outerProfileSteps - 1) * circumferenceSteps, // Outer wall mouth
+      circumferenceSteps,
+      true, // Mouth end
+    );
+  } else if (geometry.hornMount.thickness > 0) {
+    // When horn mount has thickness, connect at the offset position
+    // Find the inner surface index at the offset position
+    const offsetX = originalProfile[innerProfileSteps - 1].x - geometry.hornMount.thickness;
+    let innerOffsetIdx = (innerProfileSteps - 1) * circumferenceSteps;
+    for (let i = innerProfileSteps - 1; i >= 0; i--) {
+      if (originalProfile[i].x <= offsetX) {
+        innerOffsetIdx = i * circumferenceSteps;
+        break;
+      }
+    }
+    connectWalls(
+      indices,
+      innerOffsetIdx, // Inner wall at offset position
+      outerStartIdx + (outerProfileSteps - 1) * circumferenceSteps, // Outer wall ends at trimmed position
       circumferenceSteps,
       true, // Mouth end
     );
@@ -393,7 +441,7 @@ function connectWalls(
  */
 function generateHornBodyMesh(
   geometry: HornGeometry,
-  effectiveProfile: ProfileXY,
+  originalProfile: ProfileXY,
   resolution: number,
 ): MeshData {
   const { mode, widthProfile, heightProfile } = geometry;
@@ -402,16 +450,16 @@ function generateHornBodyMesh(
   const normals: number[] = [];
 
   const circumferenceSteps = resolution;
-  const profileSteps = effectiveProfile.length;
+  const profileSteps = originalProfile.length;
 
   // Generate vertices for each profile point
   for (let i = 0; i < profileSteps; i++) {
-    const point = effectiveProfile[i];
+    const point = originalProfile[i];
     const x = point.x;
 
     // Calculate dimensions at this profile position
     const { width, height } = calculateDimensionsAt(
-      effectiveProfile,
+      originalProfile,
       widthProfile,
       heightProfile,
       x,
@@ -457,7 +505,7 @@ function generateHornBodyMesh(
   if (!hasDriverMount) {
     // Add throat cap
     const throatCenterIdx = vertices.length / 3;
-    vertices.push(effectiveProfile[0].x, 0, 0);
+    vertices.push(originalProfile[0].x, 0, 0);
     normals.push(-1, 0, 0); // Normal pointing backward
 
     for (let j = 0; j < circumferenceSteps; j++) {
@@ -471,7 +519,7 @@ function generateHornBodyMesh(
     // Add mouth cap
     const mouthCenterIdx = vertices.length / 3;
     const lastProfileIdx = profileSteps - 1;
-    vertices.push(effectiveProfile[lastProfileIdx].x, 0, 0);
+    vertices.push(originalProfile[lastProfileIdx].x, 0, 0);
     normals.push(1, 0, 0); // Normal pointing forward
 
     for (let j = 0; j < circumferenceSteps; j++) {
