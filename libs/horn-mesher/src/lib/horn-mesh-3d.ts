@@ -8,10 +8,12 @@ import type {
   HornMountConfig,
 } from "@horn-sim/types";
 import type { MeshGenerationOptions } from "./types";
-import { generateCrossSection } from "./cross-section";
+import { generateCrossSection, generateCrossSectionPoints } from "./cross-section";
 import { generateDriverMount, generateHornMount } from "./mounts";
 import { mergeMeshData } from "./mesh-utils";
 import { calculateDimensionsAt, trimProfileAtStart, trimProfileAtEnd } from "./profile-utils";
+import { calculatePerimeter } from "./point-utils";
+import { MESH_DEFAULTS } from "./constants";
 
 /**
  * Generate a 3D horn mesh with support for various cross-sections and integrated mounts
@@ -161,6 +163,17 @@ function generateIntegratedHornBody(
         resolution,
       );
       meshes.push(edgeConnection);
+
+      // Add bolt hole connections
+      const boltConnections = generateBoltHoleConnections(
+        mountPosition,
+        offsetPosition,
+        geometry.driverMount.boltCircleDiameter,
+        geometry.driverMount.boltHoleDiameter,
+        geometry.driverMount.boltCount,
+        resolution,
+      );
+      meshes.push(boltConnections);
     } else if (!hasWallThickness && geometry.driverMount.thickness > 0) {
       // Single-walled horn: add mount face at offset position
       const offsetPosition = mountPosition + geometry.driverMount.thickness;
@@ -310,6 +323,20 @@ function generateIntegratedHornBody(
         resolution,
       );
       meshes.push(edgeConnection);
+
+      // Add bolt hole connections for horn mount
+      const boltConnections = generateHornMountBoltConnections(
+        mountPosition,
+        offsetPosition,
+        originalMouthWidth,
+        originalMouthHeight,
+        geometry.mode,
+        geometry.hornMount.boltHoleDiameter,
+        geometry.hornMount.boltSpacing,
+        geometry.hornMount.widthExtension,
+        resolution,
+      );
+      meshes.push(boltConnections);
     } else if (!hasWallThickness && geometry.hornMount.thickness > 0) {
       // Single-walled horn: add mount face at offset position
       const offsetPosition = mountPosition - geometry.hornMount.thickness;
@@ -684,6 +711,212 @@ function generateMountEdgeConnection(
     // Create two triangles for each quad
     indices.push(inner1, inner2, outer1);
     indices.push(inner2, outer2, outer1);
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+    normals: new Float32Array(normals),
+  };
+}
+
+/**
+ * Generate cylindrical connections between bolt holes on inner and outer mount faces
+ */
+function generateBoltHoleConnections(
+  innerPosition: number,
+  outerPosition: number,
+  boltCircleDiameter: number,
+  boltHoleDiameter: number,
+  boltCount: number,
+  resolution: number,
+): MeshData {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+
+  const boltRadius = boltHoleDiameter / 2;
+  const boltCircleRadius = boltCircleDiameter / 2;
+  const holeResolution = Math.max(8, Math.floor(resolution / 4)); // Fewer segments for bolt holes
+
+  // Generate each bolt hole cylinder
+  for (let boltIdx = 0; boltIdx < boltCount; boltIdx++) {
+    const boltAngle = (boltIdx / boltCount) * 2 * Math.PI;
+    const boltCenterY = boltCircleRadius * Math.cos(boltAngle);
+    const boltCenterZ = boltCircleRadius * Math.sin(boltAngle);
+
+    const baseVertexIdx = vertices.length / 3;
+
+    // Generate vertices for inner ring of bolt hole
+    for (let i = 0; i < holeResolution; i++) {
+      const angle = (i / holeResolution) * 2 * Math.PI;
+      const y = boltCenterY + boltRadius * Math.cos(angle);
+      const z = boltCenterZ + boltRadius * Math.sin(angle);
+
+      // Inner position vertex
+      vertices.push(innerPosition, y, z);
+
+      // Normal pointing inward (into the hole)
+      const ny = -Math.cos(angle);
+      const nz = -Math.sin(angle);
+      normals.push(0, ny, nz);
+    }
+
+    // Generate vertices for outer ring of bolt hole
+    for (let i = 0; i < holeResolution; i++) {
+      const angle = (i / holeResolution) * 2 * Math.PI;
+      const y = boltCenterY + boltRadius * Math.cos(angle);
+      const z = boltCenterZ + boltRadius * Math.sin(angle);
+
+      // Outer position vertex
+      vertices.push(outerPosition, y, z);
+
+      // Normal pointing inward (into the hole)
+      const ny = -Math.cos(angle);
+      const nz = -Math.sin(angle);
+      normals.push(0, ny, nz);
+    }
+
+    // Generate triangles to connect inner and outer rings
+    for (let i = 0; i < holeResolution; i++) {
+      const j = (i + 1) % holeResolution;
+
+      const inner1 = baseVertexIdx + i;
+      const inner2 = baseVertexIdx + j;
+      const outer1 = baseVertexIdx + holeResolution + i;
+      const outer2 = baseVertexIdx + holeResolution + j;
+
+      // Create triangles (reversed winding for inward-facing normals)
+      indices.push(inner1, outer1, inner2);
+      indices.push(inner2, outer1, outer2);
+    }
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+    normals: new Float32Array(normals),
+  };
+}
+
+/**
+ * Generate bolt hole connections for horn mount (handles different patterns)
+ * Uses the same bolt positioning logic as the mount generation for perfect alignment
+ */
+function generateHornMountBoltConnections(
+  innerPosition: number,
+  outerPosition: number,
+  mouthWidth: number,
+  mouthHeight: number,
+  mode: CrossSectionMode,
+  boltHoleDiameter: number,
+  boltSpacing: number,
+  widthExtension: number,
+  resolution: number,
+): MeshData {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+
+  const boltRadius = boltHoleDiameter / 2;
+  const holeResolution = Math.max(8, Math.floor(resolution / 4));
+
+  // Use the EXACT same point generation as the mount generation
+  // This matches what generateHornMount does in mounts.ts
+  const extensionFactor = 1 + widthExtension / Math.max(mouthWidth, mouthHeight);
+
+  // Generate reference points exactly as done in mount generation
+  const boltReferenceInner = generateCrossSectionPoints(
+    mode,
+    mouthWidth / 2,
+    mouthHeight / 2,
+    resolution,
+  );
+
+  const outerPoints = generateCrossSectionPoints(
+    mode,
+    (mouthWidth / 2) * extensionFactor,
+    (mouthHeight / 2) * extensionFactor,
+    resolution * MESH_DEFAULTS.OUTER_EDGE_MULTIPLIER,
+  );
+
+  // Calculate perimeter using the outer points
+  const perimeter = calculatePerimeter(outerPoints);
+  const boltCount = Math.max(MESH_DEFAULTS.MIN_BOLT_COUNT, Math.ceil(perimeter / boltSpacing));
+
+  // Calculate bolt positions using the exact same logic as mount generation
+  // This matches the calculateBoltPosition function in bolt-generation.ts
+  const boltPositions: { y: number; z: number }[] = [];
+
+  for (let b = 0; b < boltCount; b++) {
+    if (mode === "circle" || mode === "ellipse") {
+      // Radial placement - midway between inner and outer
+      // Note: outer has more points due to OUTER_EDGE_MULTIPLIER
+      const innerIdx = Math.floor((b / boltCount) * boltReferenceInner.length);
+      const outerIdx = Math.floor((b / boltCount) * outerPoints.length);
+      const innerPoint = boltReferenceInner[innerIdx];
+      const outerPoint = outerPoints[outerIdx];
+
+      boltPositions.push({
+        y: (innerPoint.y + outerPoint.y) / 2,
+        z: (innerPoint.z + outerPoint.z) / 2,
+      });
+    } else {
+      // For rectangular, use separate indices for inner and outer
+      const innerIdx = Math.floor((b / boltCount) * boltReferenceInner.length);
+      const outerIdx = Math.floor((b / boltCount) * outerPoints.length);
+      const innerPoint = boltReferenceInner[innerIdx];
+      const outerPoint = outerPoints[outerIdx];
+
+      boltPositions.push({
+        y: (innerPoint.y + outerPoint.y) / 2,
+        z: (innerPoint.z + outerPoint.z) / 2,
+      });
+    }
+  }
+
+  // Generate cylinder for each bolt hole
+  for (const boltPos of boltPositions) {
+    const baseVertexIdx = vertices.length / 3;
+
+    // Inner ring vertices
+    for (let i = 0; i < holeResolution; i++) {
+      const angle = (i / holeResolution) * 2 * Math.PI;
+      const y = boltPos.y + boltRadius * Math.cos(angle);
+      const z = boltPos.z + boltRadius * Math.sin(angle);
+
+      vertices.push(innerPosition, y, z);
+
+      const ny = -Math.cos(angle);
+      const nz = -Math.sin(angle);
+      normals.push(0, ny, nz);
+    }
+
+    // Outer ring vertices
+    for (let i = 0; i < holeResolution; i++) {
+      const angle = (i / holeResolution) * 2 * Math.PI;
+      const y = boltPos.y + boltRadius * Math.cos(angle);
+      const z = boltPos.z + boltRadius * Math.sin(angle);
+
+      vertices.push(outerPosition, y, z);
+
+      const ny = -Math.cos(angle);
+      const nz = -Math.sin(angle);
+      normals.push(0, ny, nz);
+    }
+
+    // Connect rings with triangles
+    for (let i = 0; i < holeResolution; i++) {
+      const j = (i + 1) % holeResolution;
+
+      const inner1 = baseVertexIdx + i;
+      const inner2 = baseVertexIdx + j;
+      const outer1 = baseVertexIdx + holeResolution + i;
+      const outer2 = baseVertexIdx + holeResolution + j;
+
+      indices.push(inner1, outer1, inner2);
+      indices.push(inner2, outer1, outer2);
+    }
   }
 
   return {
