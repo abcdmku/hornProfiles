@@ -66,7 +66,32 @@ function generateIntegratedHornBody(
     // This connects to the outer (expanded) horn surface
     if (hasWallThickness && geometry.driverMount.thickness > 0 && geometry.wallThickness) {
       const offsetPosition = mountPosition + geometry.driverMount.thickness;
-      const { width: offsetWidth, height: offsetHeight } = calculateDimensionsAt(
+
+      // Find the radius at the offset position and add wall thickness
+      let offsetRadius = 0;
+      for (let i = 0; i < geometry.profile.length - 1; i++) {
+        if (
+          geometry.profile[i].x <= offsetPosition &&
+          geometry.profile[i + 1].x >= offsetPosition
+        ) {
+          // Linear interpolation between profile points
+          const t =
+            (offsetPosition - geometry.profile[i].x) /
+            (geometry.profile[i + 1].x - geometry.profile[i].x);
+          offsetRadius =
+            geometry.profile[i].y + t * (geometry.profile[i + 1].y - geometry.profile[i].y);
+          break;
+        }
+      }
+      if (offsetRadius === 0 && geometry.profile.length > 0) {
+        offsetRadius = geometry.profile[0].y; // Fallback to first point
+      }
+
+      // Add wall thickness radially
+      const offsetProfileRadius = offsetRadius + geometry.wallThickness;
+
+      // Get base dimensions at the original position
+      const { width: baseWidth, height: baseHeight } = calculateDimensionsAt(
         geometry.profile,
         geometry.widthProfile,
         geometry.heightProfile,
@@ -75,13 +100,32 @@ function generateIntegratedHornBody(
         geometry.height,
       );
 
-      // Calculate outer dimensions (expanded by wall thickness)
-      const outerWidth = offsetWidth + 2 * geometry.wallThickness;
-      const outerHeight = offsetHeight + 2 * geometry.wallThickness;
+      // Calculate outer dimensions based on the perpendicular offset
+      let outerWidth: number;
+      let outerHeight: number;
+
+      if (geometry.mode === "circle") {
+        outerWidth = offsetProfileRadius * 2;
+        outerHeight = offsetProfileRadius * 2;
+      } else if (geometry.mode === "ellipse" || geometry.mode === "rectangular") {
+        // Scale dimensions proportionally based on radius increase
+        if (offsetRadius > 0) {
+          const scaleFactor = offsetProfileRadius / offsetRadius;
+          outerWidth = baseWidth * scaleFactor;
+          outerHeight = baseHeight * scaleFactor;
+        } else {
+          outerWidth = baseWidth + 2 * geometry.wallThickness;
+          outerHeight = baseHeight + 2 * geometry.wallThickness;
+        }
+      } else {
+        outerWidth = baseWidth + 2 * geometry.wallThickness;
+        outerHeight = baseHeight + 2 * geometry.wallThickness;
+      }
 
       // Generate outer mount face that connects to the outer horn surface
+      // Use the actual X position where the offset profile will be
       const outerMountMesh = generateDriverMount(
-        offsetPosition,
+        offsetPosition, // Keep mount at original offset position
         outerWidth,
         outerHeight,
         geometry.mode,
@@ -156,7 +200,29 @@ function generateIntegratedHornBody(
     // This connects to the outer (expanded) horn surface
     if (hasWallThickness && geometry.hornMount.thickness > 0 && geometry.wallThickness) {
       const offsetPosition = mountPosition - geometry.hornMount.thickness;
-      const { width: offsetWidth, height: offsetHeight } = calculateDimensionsAt(
+
+      // Find the radius at the offset position and add wall thickness
+      let offsetRadius = geometry.profile[geometry.profile.length - 1].y; // Default to last point
+      for (let i = geometry.profile.length - 1; i > 0; i--) {
+        if (
+          geometry.profile[i].x >= offsetPosition &&
+          geometry.profile[i - 1].x <= offsetPosition
+        ) {
+          // Linear interpolation between profile points
+          const t =
+            (offsetPosition - geometry.profile[i - 1].x) /
+            (geometry.profile[i].x - geometry.profile[i - 1].x);
+          offsetRadius =
+            geometry.profile[i - 1].y + t * (geometry.profile[i].y - geometry.profile[i - 1].y);
+          break;
+        }
+      }
+
+      // Add wall thickness radially
+      const offsetProfileRadius = offsetRadius + geometry.wallThickness;
+
+      // Get base dimensions at the original position
+      const { width: baseWidth, height: baseHeight } = calculateDimensionsAt(
         geometry.profile,
         geometry.widthProfile,
         geometry.heightProfile,
@@ -165,9 +231,27 @@ function generateIntegratedHornBody(
         geometry.height,
       );
 
-      // Calculate outer dimensions (expanded by wall thickness)
-      const outerWidth = offsetWidth + 2 * geometry.wallThickness;
-      const outerHeight = offsetHeight + 2 * geometry.wallThickness;
+      // Calculate outer dimensions based on the perpendicular offset
+      let outerWidth: number;
+      let outerHeight: number;
+
+      if (geometry.mode === "circle") {
+        outerWidth = offsetProfileRadius * 2;
+        outerHeight = offsetProfileRadius * 2;
+      } else if (geometry.mode === "ellipse" || geometry.mode === "rectangular") {
+        // Scale dimensions proportionally based on radius increase
+        if (offsetRadius > 0) {
+          const scaleFactor = offsetProfileRadius / offsetRadius;
+          outerWidth = baseWidth * scaleFactor;
+          outerHeight = baseHeight * scaleFactor;
+        } else {
+          outerWidth = baseWidth + 2 * geometry.wallThickness;
+          outerHeight = baseHeight + 2 * geometry.wallThickness;
+        }
+      } else {
+        outerWidth = baseWidth + 2 * geometry.wallThickness;
+        outerHeight = baseHeight + 2 * geometry.wallThickness;
+      }
 
       // Generate outer mount face that connects to the outer horn surface
       const outerMountMesh = generateHornMount(
@@ -271,30 +355,62 @@ function generateDoubleWalledHornBody(
     }
   }
 
-  // Generate outer wall vertices (expanded by wall thickness and TRIMMED)
+  // Calculate the offset profile for the outer wall
+  // For a horn, we want to maintain equal wall thickness measured perpendicular to the surface
+  // Since the horn is a surface of revolution, adding constant radial thickness gives equal wall thickness
+  const offsetProfile: ProfileXY = [];
+  for (let i = 0; i < outerProfile.length; i++) {
+    const point = outerProfile[i];
+
+    // Simply add wall thickness radially - this gives uniform wall thickness for a surface of revolution
+    // Keep the same X position to maintain horn length
+    offsetProfile.push({
+      x: point.x, // Keep original X position - no length change
+      y: point.y + wallThickness, // Add wall thickness radially
+    });
+  }
+
+  // Generate outer wall vertices (using perpendicular offset for equal thickness)
   // This creates the external surface of the horn wall
   const outerStartIdx = innerProfileSteps * circumferenceSteps;
   for (let i = 0; i < outerProfileSteps; i++) {
-    const point = outerProfile[i];
+    const point = offsetProfile[i];
     const x = point.x;
 
     // Calculate dimensions at this profile position
+    // Use the offset radius but keep the aspect ratio scaling
     const { width, height } = calculateDimensionsAt(
       outerProfile,
       widthProfile,
       heightProfile,
-      x,
+      outerProfile[i].x, // Use original x position for dimension scaling
       geometry.width,
       geometry.height,
     );
 
-    // Generate outer cross-section (expanded by wall thickness)
-    const outerRadius = point.y + wallThickness;
-    const outerWidth = width + 2 * wallThickness;
-    const outerHeight = height + 2 * wallThickness;
+    // For elliptical and rectangular modes, we need to scale the offset proportionally
+    // to maintain the shape while adding thickness
+    let outerWidth = width;
+    let outerHeight = height;
+
+    if (mode === "ellipse" || mode === "rectangular") {
+      // Calculate the scaling factor based on the radius increase
+      const innerRadius = outerProfile[i].y;
+      const outerRadius = point.y;
+      if (innerRadius > 0) {
+        const scaleFactor = outerRadius / innerRadius;
+        outerWidth = width * scaleFactor;
+        outerHeight = height * scaleFactor;
+      }
+    } else {
+      // For circular mode, the radius is already offset correctly
+      outerWidth = point.y * 2;
+      outerHeight = point.y * 2;
+    }
+
     const crossSection = generateCrossSection(
       mode,
-      outerRadius,
+      point.y,
       outerWidth,
       outerHeight,
       circumferenceSteps,
@@ -498,12 +614,16 @@ function generateHornBodyMesh(
     }
   }
 
-  // Add end caps if no mounts are present
+  // Only add end caps if the horn has wall thickness (double-walled horn)
+  // For single-walled horns (no thickness), leave the ends open
+  const hasWallThickness = (geometry.wallThickness ?? 0) > 0;
   const hasDriverMount = geometry.driverMount?.enabled;
   const hasHornMount = geometry.hornMount?.enabled;
 
-  if (!hasDriverMount) {
-    // Add throat cap
+  // Don't seal throat/mouth for horns without wall thickness
+  // Only seal if we have wall thickness OR if there's a mount present
+  if (!hasDriverMount && hasWallThickness) {
+    // Add throat cap only for double-walled horns
     const throatCenterIdx = vertices.length / 3;
     vertices.push(originalProfile[0].x, 0, 0);
     normals.push(-1, 0, 0); // Normal pointing backward
@@ -515,8 +635,8 @@ function generateHornBodyMesh(
     }
   }
 
-  if (!hasHornMount) {
-    // Add mouth cap
+  if (!hasHornMount && hasWallThickness) {
+    // Add mouth cap only for double-walled horns
     const mouthCenterIdx = vertices.length / 3;
     const lastProfileIdx = profileSteps - 1;
     vertices.push(originalProfile[lastProfileIdx].x, 0, 0);
