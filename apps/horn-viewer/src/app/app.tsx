@@ -19,7 +19,19 @@ export function App(): React.JSX.Element {
     resolution: "100",
     cutoffFrequency: "100",
     speedOfSound: "343.2",
+    transitionLength: "500", // Default to full length
   });
+
+  // Shape transition controls
+  const [throatShape, setThroatShape] = useState<
+    "circle" | "ellipse" | "rectangular" | "superellipse"
+  >("circle");
+  const [mouthShape, setMouthShape] = useState<
+    "circle" | "ellipse" | "rectangular" | "superellipse"
+  >("circle");
+  const [morphingFunction, setMorphingFunction] = useState<"linear" | "cubic" | "sigmoid">(
+    "linear",
+  );
 
   // Convert to safe numeric parameters for profile generation with validation
   const parameters = useMemo((): HornProfileParameters => {
@@ -40,6 +52,10 @@ export function App(): React.JSX.Element {
         resolution: safeFloat(inputValues.resolution, 100, 10, 500),
         cutoffFrequency: safeFloat(inputValues.cutoffFrequency, 100, 20, 20000),
         speedOfSound: safeFloat(inputValues.speedOfSound, 343.2, 100, 500),
+        transitionLength: safeFloat(inputValues.transitionLength, 500, 10, 10000),
+        throatShape,
+        mouthShape,
+        morphingFunction,
       };
 
       // Additional validation: mouth must be larger than throat
@@ -64,9 +80,13 @@ export function App(): React.JSX.Element {
         resolution: 100,
         cutoffFrequency: 100,
         speedOfSound: 343.2,
+        transitionLength: 500,
+        throatShape: "circle",
+        mouthShape: "circle",
+        morphingFunction: "linear",
       };
     }
-  }, [inputValues]);
+  }, [inputValues, throatShape, mouthShape, morphingFunction]);
   const [throatLocked, setThroatLocked] = useState(true);
   const [mouthLocked, setMouthLocked] = useState(true);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
@@ -170,12 +190,14 @@ export function App(): React.JSX.Element {
   }, [profile, meshMode, meshResolution, wallThickness, driverMount, hornMount]);
 
   const handleParameterChange = useCallback(
-    (key: keyof HornProfileParameters, value: string): void => {
+    (key: string, value: string): void => {
       setInputValues((prev) => {
         const newValues = { ...prev };
 
         // Always allow the user to type whatever they want
-        newValues[key] = value;
+        if (key in newValues) {
+          (newValues as Record<string, string>)[key] = value;
+        }
 
         // Handle aspect ratio locking - but be more graceful about empty/invalid values
         const numValue = parseFloat(value);
@@ -458,6 +480,101 @@ export function App(): React.JSX.Element {
                   onChange={(value) => handleParameterChange("speedOfSound", value)}
                   unit="m/s"
                 />
+
+                {/* Shape Transition Controls */}
+                <div className="space-y-3 pt-3 border-t border-slate-700/50">
+                  <h3 className="text-sm font-medium text-slate-300">Shape Transition</h3>
+
+                  <div>
+                    <label
+                      htmlFor="throat-shape"
+                      className="block text-sm font-medium text-slate-300 mb-2"
+                    >
+                      Throat Shape
+                    </label>
+                    <select
+                      id="throat-shape"
+                      value={throatShape}
+                      onChange={(e) =>
+                        setThroatShape(
+                          e.currentTarget.value as
+                            | "circle"
+                            | "ellipse"
+                            | "rectangular"
+                            | "superellipse",
+                        )
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="circle">Circle</option>
+                      <option value="ellipse">Ellipse</option>
+                      <option value="rectangular">Rectangular</option>
+                      <option value="superellipse">Superellipse</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="mouth-shape"
+                      className="block text-sm font-medium text-slate-300 mb-2"
+                    >
+                      Mouth Shape
+                    </label>
+                    <select
+                      id="mouth-shape"
+                      value={mouthShape}
+                      onChange={(e) =>
+                        setMouthShape(
+                          e.currentTarget.value as
+                            | "circle"
+                            | "ellipse"
+                            | "rectangular"
+                            | "superellipse",
+                        )
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="circle">Circle</option>
+                      <option value="ellipse">Ellipse</option>
+                      <option value="rectangular">Rectangular</option>
+                      <option value="superellipse">Superellipse</option>
+                    </select>
+                  </div>
+
+                  <NumericInput
+                    id="transition-length"
+                    label="Transition Length"
+                    value={inputValues.transitionLength}
+                    min={10}
+                    max={10000}
+                    onChange={(value) => handleParameterChange("transitionLength", value)}
+                    unit="mm"
+                  />
+
+                  <div>
+                    <label
+                      htmlFor="morphing-function"
+                      className="block text-sm font-medium text-slate-300 mb-2"
+                    >
+                      Transition Style
+                    </label>
+                    <select
+                      id="morphing-function"
+                      value={morphingFunction}
+                      onChange={(e) =>
+                        setMorphingFunction(e.currentTarget.value as "linear" | "cubic" | "sigmoid")
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    >
+                      <option value="linear">Linear</option>
+                      <option value="cubic">Smooth (Cubic)</option>
+                      <option value="sigmoid">S-Curve (Sigmoid)</option>
+                    </select>
+                    <div className="text-xs text-slate-500 mt-1">
+                      How the shape morphs from throat to mouth
+                    </div>
+                  </div>
+                </div>
 
                 {/* 3D View Options */}
                 {viewMode === "3d" && (
