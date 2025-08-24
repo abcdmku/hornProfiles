@@ -1,4 +1,12 @@
-import type { HornGeometry, MeshData, MountOffsets, ProfileXY } from "@horn-sim/types";
+import type {
+  HornGeometry,
+  MeshData,
+  MountOffsets,
+  ProfileXY,
+  CrossSectionMode,
+  DriverMountConfig,
+  HornMountConfig,
+} from "@horn-sim/types";
 import type { MeshGenerationOptions } from "./types";
 import { generateCrossSection } from "./cross-section";
 import { generateDriverMount, generateHornMount } from "./mounts";
@@ -122,14 +130,21 @@ function generateIntegratedHornBody(
         outerHeight = baseHeight + 2 * geometry.wallThickness;
       }
 
-      // Generate outer mount face that connects to the outer horn surface
-      // Use the actual X position where the offset profile will be
-      const outerMountMesh = generateDriverMount(
-        offsetPosition, // Keep mount at original offset position
-        outerWidth,
-        outerHeight,
+      // Generate outer mount face with same outer diameter and bolt holes as inner mount
+      // But with inner hole sized to match the offset horn surface
+      const outerMountConfig = {
+        ...geometry.driverMount,
+        thickness: 0, // Generate face only
+      };
+
+      // Create a modified generateDriverMount call that uses offset dimensions for inner hole
+      // but keeps original mount outer dimensions
+      const outerMountMesh = generateDriverMountWithCustomInner(
+        offsetPosition,
+        outerWidth, // Inner hole width (offset horn surface)
+        outerHeight, // Inner hole height (offset horn surface)
         geometry.mode,
-        { ...geometry.driverMount, thickness: 0 }, // Generate face only
+        outerMountConfig,
         resolution,
       );
 
@@ -253,11 +268,18 @@ function generateIntegratedHornBody(
         outerHeight = baseHeight + 2 * geometry.wallThickness;
       }
 
-      // Generate outer mount face that connects to the outer horn surface
-      const outerMountMesh = generateHornMount(
+      // Generate outer mount face with same outer diameter and bolt holes as inner mount
+      // But with inner hole sized to match the offset horn surface
+      // Get original mouth dimensions for outer boundary
+      const originalMouthWidth = geometry.width ?? mouthWidth;
+      const originalMouthHeight = geometry.height ?? mouthHeight;
+
+      const outerMountMesh = generateHornMountWithCustomInner(
         offsetPosition,
-        outerWidth,
-        outerHeight,
+        outerWidth, // Inner hole width (offset horn surface)
+        outerHeight, // Inner hole height (offset horn surface)
+        originalMouthWidth, // Original mouth width for outer boundary
+        originalMouthHeight, // Original mouth height for outer boundary
         geometry.mode,
         { ...geometry.hornMount, thickness: 0 }, // Generate face only
         resolution,
@@ -456,8 +478,8 @@ function generateDoubleWalledHornBody(
     }
   }
 
-  // Connect inner and outer walls at throat edge if no driver mount
-  // This creates a ring connecting the two horn surfaces at the throat
+  // Connect inner and outer walls at throat edge
+  // Only connect if there's no driver mount or if mount has no thickness
   if (!geometry.driverMount?.enabled) {
     connectWalls(
       indices,
@@ -466,28 +488,12 @@ function generateDoubleWalledHornBody(
       circumferenceSteps,
       false, // Throat end
     );
-  } else if (geometry.driverMount.thickness > 0) {
-    // When driver mount has thickness, connect at the offset position
-    // Find the inner surface index at the offset position
-    const offsetX = originalProfile[0].x + geometry.driverMount.thickness;
-    let innerOffsetIdx = 0;
-    for (let i = 0; i < innerProfileSteps; i++) {
-      if (originalProfile[i].x >= offsetX) {
-        innerOffsetIdx = i * circumferenceSteps;
-        break;
-      }
-    }
-    connectWalls(
-      indices,
-      innerOffsetIdx, // Inner wall at offset position
-      outerStartIdx, // Outer wall starts at trimmed position
-      circumferenceSteps,
-      false, // Throat end
-    );
   }
+  // When driver mount has thickness, the mount faces themselves connect the walls
+  // No additional connection needed here
 
-  // Connect inner and outer walls at mouth edge if no horn mount
-  // This creates a ring connecting the two horn surfaces at the mouth
+  // Connect inner and outer walls at mouth edge
+  // Only connect if there's no horn mount or if mount has no thickness
   if (!geometry.hornMount?.enabled) {
     connectWalls(
       indices,
@@ -496,25 +502,9 @@ function generateDoubleWalledHornBody(
       circumferenceSteps,
       true, // Mouth end
     );
-  } else if (geometry.hornMount.thickness > 0) {
-    // When horn mount has thickness, connect at the offset position
-    // Find the inner surface index at the offset position
-    const offsetX = originalProfile[innerProfileSteps - 1].x - geometry.hornMount.thickness;
-    let innerOffsetIdx = (innerProfileSteps - 1) * circumferenceSteps;
-    for (let i = innerProfileSteps - 1; i >= 0; i--) {
-      if (originalProfile[i].x <= offsetX) {
-        innerOffsetIdx = i * circumferenceSteps;
-        break;
-      }
-    }
-    connectWalls(
-      indices,
-      innerOffsetIdx, // Inner wall at offset position
-      outerStartIdx + (outerProfileSteps - 1) * circumferenceSteps, // Outer wall ends at trimmed position
-      circumferenceSteps,
-      true, // Mouth end
-    );
   }
+  // When horn mount has thickness, the mount faces themselves connect the walls
+  // No additional connection needed here
 
   return {
     vertices: new Float32Array(vertices),
@@ -654,6 +644,50 @@ function generateHornBodyMesh(
     indices: new Uint32Array(indices),
     normals: new Float32Array(normals),
   };
+}
+
+// Helper function to generate driver mount with custom inner hole dimensions
+function generateDriverMountWithCustomInner(
+  position: number,
+  innerWidth: number,
+  innerHeight: number,
+  mode: CrossSectionMode,
+  config: DriverMountConfig,
+  resolution: number,
+): MeshData {
+  // Use the standard mount generation but with custom inner dimensions
+  return generateDriverMount(position, innerWidth, innerHeight, mode, config, resolution);
+}
+
+// Helper function to generate horn mount with custom inner hole dimensions
+function generateHornMountWithCustomInner(
+  position: number,
+  innerWidth: number,
+  innerHeight: number,
+  originalMouthWidth: number,
+  originalMouthHeight: number,
+  mode: CrossSectionMode,
+  config: HornMountConfig,
+  resolution: number,
+): MeshData {
+  // Pass original mouth dimensions for outer boundary and bolt holes
+  // Pass custom inner dimensions for the inner hole
+  const configWithCustomInner: HornMountConfig & {
+    customInnerWidth: number;
+    customInnerHeight: number;
+  } = {
+    ...config,
+    customInnerWidth: innerWidth,
+    customInnerHeight: innerHeight,
+  };
+  return generateHornMount(
+    position,
+    originalMouthWidth,
+    originalMouthHeight,
+    mode,
+    configWithCustomInner,
+    resolution,
+  );
 }
 
 // Re-export helper functions for compatibility

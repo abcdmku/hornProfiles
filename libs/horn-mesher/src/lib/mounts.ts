@@ -4,6 +4,12 @@ import type {
   DriverMountConfig,
   HornMountConfig,
 } from "@horn-sim/types";
+
+// Extended config that supports custom inner dimensions
+interface HornMountConfigWithCustomInner extends HornMountConfig {
+  customInnerWidth?: number;
+  customInnerHeight?: number;
+}
 import * as poly2tri from "poly2tri";
 import { MESH_DEFAULTS } from "./constants";
 import { removeDuplicatePoints, toPolyPoints } from "./point-utils";
@@ -91,10 +97,16 @@ export function generateHornMount(
   mouthWidth: number,
   mouthHeight: number,
   mouthMode: CrossSectionMode,
-  config: HornMountConfig,
+  config: HornMountConfig | HornMountConfigWithCustomInner,
   resolution: number,
 ): MeshData {
+  // Use custom inner dimensions if provided
+  const extendedConfig = config as HornMountConfigWithCustomInner;
+  const innerWidth = extendedConfig.customInnerWidth ?? mouthWidth;
+  const innerHeight = extendedConfig.customInnerHeight ?? mouthHeight;
+
   // Generate outer boundary (mouth shape + extension)
+  // Always use original mouth dimensions for outer boundary to keep bolt holes aligned
   const extensionFactor = 1 + config.widthExtension / Math.max(mouthWidth, mouthHeight);
   const outerPoints = generateCrossSectionPoints(
     mouthMode,
@@ -108,20 +120,27 @@ export function generateHornMount(
   // Create sweep context
   const sweepContext = new poly2tri.SweepContext(outerContour);
 
-  // Add mouth opening as a hole
+  // Add mouth opening as a hole - use custom inner dimensions if provided
   const innerPoints = generateCrossSectionPoints(
     mouthMode,
-    mouthWidth / 2,
-    mouthHeight / 2,
+    innerWidth / 2,
+    innerHeight / 2,
     resolution,
   );
   const mouthHole = prepareHolePoints(toPolyPoints(innerPoints));
   sweepContext.addHole(mouthHole);
 
-  // Add bolt holes
+  // Add bolt holes - always position based on original mouth dimensions
+  // This ensures bolt holes align between inner and outer mounts
+  const boltReferenceInner = generateCrossSectionPoints(
+    mouthMode,
+    mouthWidth / 2,
+    mouthHeight / 2,
+    resolution,
+  );
   const boltConfigs = generateHornBoltHoles(
     mouthMode,
-    innerPoints,
+    boltReferenceInner,
     outerPoints,
     config.boltHoleDiameter / 2,
     config.boltSpacing,
