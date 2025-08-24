@@ -1,22 +1,72 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { generateProfile, HornProfileParameters, getAvailableProfiles } from "horn-profiles";
 import { HornProfileViewer } from "viewer-2d";
 import { HornViewer3D } from "@horn-sim/viewer-3d";
 import { generateHornMesh3D, meshToThree } from "@horn-sim/mesher";
 import type { HornGeometry, DriverMountConfig, HornMountConfig } from "@horn-sim/types";
+import { NumericInput } from "../components/NumericInput";
+import { PARAMETER_CONSTRAINTS } from "../utils/constants";
 
 export function App(): React.JSX.Element {
   const [profileType, setProfileType] = useState("conical");
-  const [parameters, setParameters] = useState<HornProfileParameters>({
-    throatWidth: 50,
-    throatHeight: 50,
-    mouthWidth: 600,
-    mouthHeight: 600,
-    length: 500,
-    resolution: 100,
-    cutoffFrequency: 100,
-    speedOfSound: 343.2,
+  // Use string values for better UX - users can type freely
+  const [inputValues, setInputValues] = useState({
+    throatWidth: "50",
+    throatHeight: "50",
+    mouthWidth: "600",
+    mouthHeight: "600",
+    length: "500",
+    resolution: "100",
+    cutoffFrequency: "100",
+    speedOfSound: "343.2",
   });
+
+  // Convert to safe numeric parameters for profile generation with validation
+  const parameters = useMemo((): HornProfileParameters => {
+    const safeFloat = (value: string, defaultValue: number, min = 0.1, max = 50000): number => {
+      const num = parseFloat(value);
+      if (isNaN(num) || !isFinite(num)) return defaultValue;
+      // Apply reasonable constraints to prevent invalid profiles
+      return Math.max(min, Math.min(max, num));
+    };
+
+    try {
+      const params = {
+        throatWidth: safeFloat(inputValues.throatWidth, 50, 1, 1000),
+        throatHeight: safeFloat(inputValues.throatHeight, 50, 1, 1000),
+        mouthWidth: safeFloat(inputValues.mouthWidth, 600, 10, 5000),
+        mouthHeight: safeFloat(inputValues.mouthHeight, 600, 10, 5000),
+        length: safeFloat(inputValues.length, 500, 10, 10000),
+        resolution: safeFloat(inputValues.resolution, 100, 10, 500),
+        cutoffFrequency: safeFloat(inputValues.cutoffFrequency, 100, 20, 20000),
+        speedOfSound: safeFloat(inputValues.speedOfSound, 343.2, 100, 500),
+      };
+
+      // Additional validation: mouth must be larger than throat
+      if (params.mouthWidth < params.throatWidth) {
+        params.mouthWidth = Math.max(params.throatWidth * 1.1, params.mouthWidth);
+      }
+      if (params.mouthHeight < params.throatHeight) {
+        params.mouthHeight = Math.max(params.throatHeight * 1.1, params.mouthHeight);
+      }
+
+      return params;
+    } catch (error) {
+      // Fallback to safe defaults
+      // eslint-disable-next-line no-console
+      console.warn("Parameter validation failed, using defaults:", error);
+      return {
+        throatWidth: 50,
+        throatHeight: 50,
+        mouthWidth: 600,
+        mouthHeight: 600,
+        length: 500,
+        resolution: 100,
+        cutoffFrequency: 100,
+        speedOfSound: 343.2,
+      };
+    }
+  }, [inputValues]);
   const [throatLocked, setThroatLocked] = useState(true);
   const [mouthLocked, setMouthLocked] = useState(true);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
@@ -43,72 +93,144 @@ export function App(): React.JSX.Element {
     thickness: 10,
   });
 
-  const profile = generateProfile(profileType, parameters);
+  // Safe profile generation - never throw errors to UI
+  const profile = useMemo(() => {
+    try {
+      // Additional safety check before calling generateProfile
+      if (
+        !parameters ||
+        !isFinite(parameters.throatWidth) ||
+        !isFinite(parameters.throatHeight) ||
+        !isFinite(parameters.mouthWidth) ||
+        !isFinite(parameters.mouthHeight) ||
+        !isFinite(parameters.length) ||
+        parameters.throatWidth <= 0 ||
+        parameters.throatHeight <= 0 ||
+        parameters.mouthWidth <= 0 ||
+        parameters.mouthHeight <= 0 ||
+        parameters.length <= 0
+      ) {
+        return null;
+      }
+
+      return generateProfile(profileType, parameters);
+    } catch (error) {
+      // Silently fail - viewer will show "no profile" state
+      // eslint-disable-next-line no-console
+      console.warn("Profile generation failed:", error);
+      return null;
+    }
+  }, [profileType, parameters]);
+
   const availableProfiles = getAvailableProfiles();
 
-  // Generate 3D mesh data when profile changes
+  // Generate 3D mesh data when profile changes - safe from errors
   const meshData = useMemo(() => {
-    if (!profile) return null;
+    // More thorough null/undefined checks
+    if (
+      !profile ||
+      !profile.points ||
+      !profile.widthProfile ||
+      !profile.heightProfile ||
+      !profile.metadata?.parameters
+    ) {
+      return null;
+    }
 
-    const hornGeometry: HornGeometry = {
-      mode: meshMode,
-      profile: profile.points,
-      widthProfile: profile.widthProfile,
-      heightProfile: profile.heightProfile,
-      throatRadius:
-        Math.min(
-          profile.metadata.parameters.throatWidth,
-          profile.metadata.parameters.throatHeight,
-        ) / 2,
-      width: profile.metadata.parameters.mouthWidth,
-      height: profile.metadata.parameters.mouthHeight,
-      wallThickness: wallThickness > 0 ? wallThickness : undefined,
-      driverMount: driverMount.enabled ? driverMount : undefined,
-      hornMount: hornMount.enabled ? hornMount : undefined,
-    };
+    try {
+      const hornGeometry: HornGeometry = {
+        mode: meshMode,
+        profile: profile.points,
+        widthProfile: profile.widthProfile,
+        heightProfile: profile.heightProfile,
+        throatRadius:
+          Math.min(
+            profile.metadata.parameters.throatWidth,
+            profile.metadata.parameters.throatHeight,
+          ) / 2,
+        width: profile.metadata.parameters.mouthWidth,
+        height: profile.metadata.parameters.mouthHeight,
+        wallThickness: wallThickness > 0 ? wallThickness : undefined,
+        driverMount: driverMount.enabled ? driverMount : undefined,
+        hornMount: hornMount.enabled ? hornMount : undefined,
+      };
 
-    const mesh = generateHornMesh3D(hornGeometry, {
-      resolution: meshResolution,
-      elementSize: 5, // This parameter is not used in the current implementation
-    });
+      const mesh = generateHornMesh3D(hornGeometry, {
+        resolution: meshResolution,
+        elementSize: 5, // This parameter is not used in the current implementation
+      });
 
-    return meshToThree(mesh);
+      return meshToThree(mesh);
+    } catch (error) {
+      // Silently fail - 3D viewer will show fallback message
+      // eslint-disable-next-line no-console
+      console.warn("Mesh generation failed:", error);
+      return null;
+    }
   }, [profile, meshMode, meshResolution, wallThickness, driverMount, hornMount]);
 
-  const handleParameterChange = (key: keyof HornProfileParameters, value: string): void => {
-    const numValue = parseFloat(value) || 0;
+  const handleParameterChange = useCallback(
+    (key: keyof HornProfileParameters, value: string): void => {
+      setInputValues((prev) => {
+        const newValues = { ...prev };
 
-    setParameters((prev) => {
-      const newParams = { ...prev };
+        // Always allow the user to type whatever they want
+        newValues[key] = value;
 
-      // Handle aspect ratio locking for throat
-      if (key === "throatWidth" && throatLocked) {
-        const aspectRatio = prev.throatHeight / prev.throatWidth;
-        newParams.throatWidth = numValue;
-        newParams.throatHeight = numValue * aspectRatio;
-      } else if (key === "throatHeight" && throatLocked) {
-        const aspectRatio = prev.throatWidth / prev.throatHeight;
-        newParams.throatHeight = numValue;
-        newParams.throatWidth = numValue * aspectRatio;
-      }
-      // Handle aspect ratio locking for mouth
-      else if (key === "mouthWidth" && mouthLocked) {
-        const aspectRatio = prev.mouthHeight / prev.mouthWidth;
-        newParams.mouthWidth = numValue;
-        newParams.mouthHeight = numValue * aspectRatio;
-      } else if (key === "mouthHeight" && mouthLocked) {
-        const aspectRatio = prev.mouthWidth / prev.mouthHeight;
-        newParams.mouthHeight = numValue;
-        newParams.mouthWidth = numValue * aspectRatio;
-      }
-      // No locking, just update the value
-      else {
-        newParams[key] = numValue;
-      }
+        // Handle aspect ratio locking - but be more graceful about empty/invalid values
+        const numValue = parseFloat(value);
+        const hasValidNumber = !isNaN(numValue) && isFinite(numValue) && numValue > 0;
 
-      return newParams;
-    });
-  };
+        if (hasValidNumber) {
+          if (throatLocked && (key === "throatWidth" || key === "throatHeight")) {
+            const prevWidth = parseFloat(prev.throatWidth);
+            const prevHeight = parseFloat(prev.throatHeight);
+
+            // Calculate aspect ratio - use existing ratio if valid, otherwise default to 1:1
+            let ratio = 1;
+            if (!isNaN(prevWidth) && !isNaN(prevHeight) && prevWidth > 0 && prevHeight > 0) {
+              ratio = key === "throatWidth" ? prevHeight / prevWidth : prevWidth / prevHeight;
+            }
+
+            if (key === "throatWidth") {
+              newValues.throatHeight = (numValue * ratio).toString();
+            } else {
+              newValues.throatWidth = (numValue * ratio).toString();
+            }
+          } else if (mouthLocked && (key === "mouthWidth" || key === "mouthHeight")) {
+            const prevWidth = parseFloat(prev.mouthWidth);
+            const prevHeight = parseFloat(prev.mouthHeight);
+
+            // Calculate aspect ratio - use existing ratio if valid, otherwise default to 1:1
+            let ratio = 1;
+            if (!isNaN(prevWidth) && !isNaN(prevHeight) && prevWidth > 0 && prevHeight > 0) {
+              ratio = key === "mouthWidth" ? prevHeight / prevWidth : prevWidth / prevHeight;
+            }
+
+            if (key === "mouthWidth") {
+              newValues.mouthHeight = (numValue * ratio).toString();
+            } else {
+              newValues.mouthWidth = (numValue * ratio).toString();
+            }
+          }
+        } else if (value === "") {
+          // When user clears a field, clear the locked partner too if locking is enabled
+          if (throatLocked && key === "throatWidth") {
+            newValues.throatHeight = "";
+          } else if (throatLocked && key === "throatHeight") {
+            newValues.throatWidth = "";
+          } else if (mouthLocked && key === "mouthWidth") {
+            newValues.mouthHeight = "";
+          } else if (mouthLocked && key === "mouthHeight") {
+            newValues.mouthWidth = "";
+          }
+        }
+
+        return newValues;
+      });
+    },
+    [throatLocked, mouthLocked],
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950">
@@ -220,34 +342,24 @@ export function App(): React.JSX.Element {
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label htmlFor="throat-width" className="block text-xs text-slate-400 mb-1">
-                        Width
-                      </label>
-                      <input
-                        id="throat-width"
-                        type="number"
-                        value={parameters.throatWidth}
-                        onChange={(e) =>
-                          handleParameterChange("throatWidth", e.currentTarget.value)
-                        }
-                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="throat-height" className="block text-xs text-slate-400 mb-1">
-                        Height
-                      </label>
-                      <input
-                        id="throat-height"
-                        type="number"
-                        value={parameters.throatHeight}
-                        onChange={(e) =>
-                          handleParameterChange("throatHeight", e.currentTarget.value)
-                        }
-                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      />
-                    </div>
+                    <NumericInput
+                      id="throat-width"
+                      label="Width"
+                      value={inputValues.throatWidth}
+                      min={PARAMETER_CONSTRAINTS.throatWidth.min}
+                      max={PARAMETER_CONSTRAINTS.throatWidth.max}
+                      onChange={(value) => handleParameterChange("throatWidth", value)}
+                      unit="mm"
+                    />
+                    <NumericInput
+                      id="throat-height"
+                      label="Height"
+                      value={inputValues.throatHeight}
+                      min={PARAMETER_CONSTRAINTS.throatHeight.min}
+                      max={PARAMETER_CONSTRAINTS.throatHeight.max}
+                      onChange={(value) => handleParameterChange("throatHeight", value)}
+                      unit="mm"
+                    />
                   </div>
                 </div>
 
@@ -297,79 +409,55 @@ export function App(): React.JSX.Element {
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label htmlFor="mouth-width" className="block text-xs text-slate-400 mb-1">
-                        Width
-                      </label>
-                      <input
-                        id="mouth-width"
-                        type="number"
-                        value={parameters.mouthWidth}
-                        onChange={(e) => handleParameterChange("mouthWidth", e.currentTarget.value)}
-                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="mouth-height" className="block text-xs text-slate-400 mb-1">
-                        Height
-                      </label>
-                      <input
-                        id="mouth-height"
-                        type="number"
-                        value={parameters.mouthHeight}
-                        onChange={(e) =>
-                          handleParameterChange("mouthHeight", e.currentTarget.value)
-                        }
-                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      />
-                    </div>
+                    <NumericInput
+                      id="mouth-width"
+                      label="Width"
+                      value={inputValues.mouthWidth}
+                      min={PARAMETER_CONSTRAINTS.mouthWidth.min}
+                      max={PARAMETER_CONSTRAINTS.mouthWidth.max}
+                      onChange={(value) => handleParameterChange("mouthWidth", value)}
+                      unit="mm"
+                    />
+                    <NumericInput
+                      id="mouth-height"
+                      label="Height"
+                      value={inputValues.mouthHeight}
+                      min={PARAMETER_CONSTRAINTS.mouthHeight.min}
+                      max={PARAMETER_CONSTRAINTS.mouthHeight.max}
+                      onChange={(value) => handleParameterChange("mouthHeight", value)}
+                      unit="mm"
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="length" className="block text-sm font-medium text-slate-300 mb-2">
-                    Length (mm)
-                  </label>
-                  <input
-                    id="length"
-                    type="number"
-                    value={parameters.length}
-                    onChange={(e) => handleParameterChange("length", e.currentTarget.value)}
-                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
-                </div>
+                <NumericInput
+                  id="length"
+                  label="Length"
+                  value={inputValues.length}
+                  min={PARAMETER_CONSTRAINTS.length.min}
+                  max={PARAMETER_CONSTRAINTS.length.max}
+                  onChange={(value) => handleParameterChange("length", value)}
+                  unit="mm"
+                />
 
-                <div>
-                  <label
-                    htmlFor="resolution"
-                    className="block text-sm font-medium text-slate-300 mb-2"
-                  >
-                    Resolution
-                  </label>
-                  <input
-                    id="resolution"
-                    type="number"
-                    value={parameters.resolution}
-                    onChange={(e) => handleParameterChange("resolution", e.currentTarget.value)}
-                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
-                </div>
+                <NumericInput
+                  id="resolution"
+                  label="Resolution"
+                  value={inputValues.resolution}
+                  min={PARAMETER_CONSTRAINTS.resolution.min}
+                  max={PARAMETER_CONSTRAINTS.resolution.max}
+                  onChange={(value) => handleParameterChange("resolution", value)}
+                />
 
-                <div>
-                  <label
-                    htmlFor="speed-of-sound"
-                    className="block text-sm font-medium text-slate-300 mb-2"
-                  >
-                    Speed of Sound (m/s)
-                  </label>
-                  <input
-                    id="speed-of-sound"
-                    type="number"
-                    value={parameters.speedOfSound}
-                    onChange={(e) => handleParameterChange("speedOfSound", e.currentTarget.value)}
-                    className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  />
-                </div>
+                <NumericInput
+                  id="speed-of-sound"
+                  label="Speed of Sound"
+                  value={inputValues.speedOfSound}
+                  min={PARAMETER_CONSTRAINTS.speedOfSound.min}
+                  max={PARAMETER_CONSTRAINTS.speedOfSound.max}
+                  onChange={(value) => handleParameterChange("speedOfSound", value)}
+                  unit="m/s"
+                />
 
                 {/* 3D View Options */}
                 {viewMode === "3d" && (
@@ -436,7 +524,10 @@ export function App(): React.JSX.Element {
                         min="0"
                         step="0.5"
                         value={wallThickness}
-                        onChange={(e) => setWallThickness(Number(e.currentTarget.value))}
+                        onChange={(e) => {
+                          const val = parseFloat(e.currentTarget.value);
+                          setWallThickness(isNaN(val) ? 0 : val);
+                        }}
                         className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                         placeholder="0 for solid horn"
                       />
@@ -490,12 +581,13 @@ export function App(): React.JSX.Element {
                             id="driver-outer-diameter"
                             type="number"
                             value={driverMount.outerDiameter}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
                               setDriverMount({
                                 ...driverMount,
-                                outerDiameter: Number(e.target.value),
-                              })
-                            }
+                                outerDiameter: isNaN(val) ? 0 : val,
+                              });
+                            }}
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
                         </div>
@@ -510,12 +602,13 @@ export function App(): React.JSX.Element {
                             id="driver-thickness"
                             type="number"
                             value={driverMount.thickness}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
                               setDriverMount({
                                 ...driverMount,
-                                thickness: Number(e.target.value),
-                              })
-                            }
+                                thickness: isNaN(val) ? 0 : val,
+                              });
+                            }}
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
                         </div>
@@ -530,12 +623,13 @@ export function App(): React.JSX.Element {
                             id="driver-bolt-circle"
                             type="number"
                             value={driverMount.boltCircleDiameter}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
                               setDriverMount({
                                 ...driverMount,
-                                boltCircleDiameter: Number(e.target.value),
-                              })
-                            }
+                                boltCircleDiameter: isNaN(val) ? 0 : val,
+                              });
+                            }}
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
                         </div>
@@ -553,12 +647,13 @@ export function App(): React.JSX.Element {
                               min="3"
                               max="12"
                               value={driverMount.boltCount}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value);
                                 setDriverMount({
                                   ...driverMount,
-                                  boltCount: Number(e.target.value),
-                                })
-                              }
+                                  boltCount: isNaN(val) ? 4 : val,
+                                });
+                              }}
                               className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                             />
                           </div>
@@ -573,12 +668,13 @@ export function App(): React.JSX.Element {
                               id="driver-bolt-hole"
                               type="number"
                               value={driverMount.boltHoleDiameter}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
                                 setDriverMount({
                                   ...driverMount,
-                                  boltHoleDiameter: Number(e.target.value),
-                                })
-                              }
+                                  boltHoleDiameter: isNaN(val) ? 6 : val,
+                                });
+                              }}
                               className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                             />
                           </div>
@@ -612,9 +708,10 @@ export function App(): React.JSX.Element {
                             id="horn-width-ext"
                             type="number"
                             value={hornMount.widthExtension}
-                            onChange={(e) =>
-                              setHornMount({ ...hornMount, widthExtension: Number(e.target.value) })
-                            }
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              setHornMount({ ...hornMount, widthExtension: isNaN(val) ? 50 : val });
+                            }}
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
                         </div>
@@ -629,9 +726,10 @@ export function App(): React.JSX.Element {
                             id="horn-thickness"
                             type="number"
                             value={hornMount.thickness}
-                            onChange={(e) =>
-                              setHornMount({ ...hornMount, thickness: Number(e.target.value) })
-                            }
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              setHornMount({ ...hornMount, thickness: isNaN(val) ? 10 : val });
+                            }}
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
                         </div>
@@ -647,9 +745,10 @@ export function App(): React.JSX.Element {
                               id="horn-bolt-spacing"
                               type="number"
                               value={hornMount.boltSpacing}
-                              onChange={(e) =>
-                                setHornMount({ ...hornMount, boltSpacing: Number(e.target.value) })
-                              }
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                setHornMount({ ...hornMount, boltSpacing: isNaN(val) ? 100 : val });
+                              }}
                               className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                             />
                           </div>
@@ -664,12 +763,13 @@ export function App(): React.JSX.Element {
                               id="horn-bolt-hole"
                               type="number"
                               value={hornMount.boltHoleDiameter}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
                                 setHornMount({
                                   ...hornMount,
-                                  boltHoleDiameter: Number(e.target.value),
-                                })
-                              }
+                                  boltHoleDiameter: isNaN(val) ? 8 : val,
+                                });
+                              }}
                               className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                             />
                           </div>
@@ -716,7 +816,15 @@ export function App(): React.JSX.Element {
             {/* View Content */}
             <div className="flex-1 min-h-0 relative">
               {viewMode === "2d" ? (
-                <HornProfileViewer profile={profile} height={600} />
+                profile ? (
+                  <HornProfileViewer profile={profile} height={600} />
+                ) : (
+                  <div className="flex items-center justify-center h-full rounded-lg">
+                    <p className="text-gray-500">
+                      Invalid parameters - adjust values to generate profile
+                    </p>
+                  </div>
+                )
               ) : meshData ? (
                 <div className="absolute inset-0 rounded-lg overflow-hidden">
                   <HornViewer3D
@@ -725,12 +833,20 @@ export function App(): React.JSX.Element {
                     normals={meshData.normals}
                     wireframe={wireframe}
                     showGrid={true}
-                    gridPosition={[0, -parameters.throatRadius, 0]}
+                    gridPosition={[
+                      0,
+                      -Math.min(parameters.throatWidth, parameters.throatHeight) / 2,
+                      0,
+                    ]}
                   />
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full rounded-lg">
-                  <p className="text-gray-500">Generate a profile to view 3D model</p>
+                  <p className="text-gray-500">
+                    {profile
+                      ? "Generating 3D model..."
+                      : "Invalid parameters - adjust values to generate model"}
+                  </p>
                 </div>
               )}
             </div>
