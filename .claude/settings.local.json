@@ -94,7 +94,8 @@
       "Bash(pnpm --filter @horn-sim/horn-viewer build)",
       "Bash(timeout 30 npx nx serve horn-viewer)",
       "Bash(pnpm nx test:*)",
-      "Bash(pnpm nx eslint:lint:*)"
+      "Bash(pnpm nx eslint:lint:*)",
+      "Bash(pnpm nx vite:test:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",

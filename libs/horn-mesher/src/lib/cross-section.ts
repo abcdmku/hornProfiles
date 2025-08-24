@@ -28,12 +28,13 @@ export function generateCrossSectionPoints(
 
 /**
  * Generate points for a circular cross-section
+ * Starts from the top (positive Z-axis) for consistent morphing
  */
 function generateCirclePoints(radius: number, resolution: number): Point2D[] {
   const points: Point2D[] = [];
 
   for (let i = 0; i < resolution; i++) {
-    const angle = (i / resolution) * TWO_PI;
+    const angle = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (π/2)
     points.push({
       y: radius * Math.cos(angle),
       z: radius * Math.sin(angle),
@@ -45,6 +46,7 @@ function generateCirclePoints(radius: number, resolution: number): Point2D[] {
 
 /**
  * Generate points for an elliptical cross-section
+ * Starts from the top (positive Z-axis) for consistent morphing
  */
 function generateEllipsePoints(
   halfWidth: number,
@@ -54,7 +56,7 @@ function generateEllipsePoints(
   const points: Point2D[] = [];
 
   for (let i = 0; i < resolution; i++) {
-    const angle = (i / resolution) * TWO_PI;
+    const angle = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (π/2)
     points.push({
       y: halfWidth * Math.cos(angle),
       z: halfHeight * Math.sin(angle),
@@ -66,6 +68,7 @@ function generateEllipsePoints(
 
 /**
  * Generate points for a rectangular cross-section
+ * Starts from the top center for consistent morphing with other shapes
  */
 function generateRectanglePoints(
   halfWidth: number,
@@ -76,39 +79,39 @@ function generateRectanglePoints(
   const pointsPerSide = Math.floor(resolution / 4);
   const remainingPoints = resolution - pointsPerSide * 4;
 
-  // Bottom edge
+  // Start from top edge (consistent with circle/ellipse starting at top)
   for (let i = 0; i < pointsPerSide; i++) {
     const t = i / pointsPerSide;
     points.push({
-      y: -halfWidth + t * 2 * halfWidth,
-      z: -halfHeight,
-    });
-  }
-
-  // Right edge
-  for (let i = 0; i < pointsPerSide; i++) {
-    const t = i / pointsPerSide;
-    points.push({
-      y: halfWidth,
-      z: -halfHeight + t * 2 * halfHeight,
-    });
-  }
-
-  // Top edge
-  for (let i = 0; i < pointsPerSide; i++) {
-    const t = i / pointsPerSide;
-    points.push({
-      y: halfWidth - t * 2 * halfWidth,
+      y: halfWidth - t * 2 * halfWidth, // Start from top-right, go to top-left
       z: halfHeight,
     });
   }
 
-  // Left edge (with remaining points)
+  // Left edge
+  for (let i = 0; i < pointsPerSide; i++) {
+    const t = i / pointsPerSide;
+    points.push({
+      y: -halfWidth,
+      z: halfHeight - t * 2 * halfHeight, // Go down left side
+    });
+  }
+
+  // Bottom edge
+  for (let i = 0; i < pointsPerSide; i++) {
+    const t = i / pointsPerSide;
+    points.push({
+      y: -halfWidth + t * 2 * halfWidth, // Go right along bottom
+      z: -halfHeight,
+    });
+  }
+
+  // Right edge (with remaining points)
   for (let i = 0; i < pointsPerSide + remainingPoints; i++) {
     const t = i / (pointsPerSide + remainingPoints);
     points.push({
-      y: -halfWidth,
-      z: halfHeight - t * 2 * halfHeight,
+      y: halfWidth,
+      z: -halfHeight + t * 2 * halfHeight, // Go up right side
     });
   }
 
@@ -117,6 +120,7 @@ function generateRectanglePoints(
 
 /**
  * Generate points for a superellipse cross-section
+ * Starts from the top (positive Z-axis) for consistent morphing
  */
 function generateSuperellipsePoints(
   halfWidth: number,
@@ -127,7 +131,7 @@ function generateSuperellipsePoints(
   const n = 2.5; // Superellipse parameter
 
   for (let i = 0; i < resolution; i++) {
-    const theta = (i / resolution) * TWO_PI;
+    const theta = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (π/2)
     const cosTheta = Math.cos(theta);
     const sinTheta = Math.sin(theta);
 
