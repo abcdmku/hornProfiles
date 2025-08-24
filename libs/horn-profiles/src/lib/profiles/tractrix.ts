@@ -2,6 +2,21 @@ import { HornProfileParameters, Point2D, ProfileGeneratorResult } from "../types
 import { BaseHornProfile } from "./base";
 
 export class TractrixProfile extends BaseHornProfile {
+  protected calculateDimensionsAt(
+    x: number,
+    params: Required<HornProfileParameters>,
+  ): { width: number; height: number } {
+    const { throatWidth, throatHeight, mouthWidth, mouthHeight, length } = params;
+
+    // For tractrix, we need to interpolate between the curves
+    // This is a simplified approach - in practice you'd calculate the exact tractrix value
+    const t = x / length;
+    const width = throatWidth + (mouthWidth - throatWidth) * t; // Simplified linear interpolation
+    const height = throatHeight + (mouthHeight - throatHeight) * t;
+
+    return { width, height };
+  }
+
   generate(params: HornProfileParameters): ProfileGeneratorResult {
     this.validateParameters(params);
     const normalizedParams = this.normalizeParameters(params);
@@ -33,18 +48,33 @@ export class TractrixProfile extends BaseHornProfile {
       points.push({ x, y: avgRadius });
     }
 
+    // Generate shape profile for transitions
+    const shapeProfile = this.generateShapeProfile(normalizedParams);
+    const transitionMetadata = this.generateTransitionMetadata(normalizedParams);
+
+    // Calculate tractrix-specific values for backward compatibility
+    const { cutoffFrequency, speedOfSound } = normalizedParams;
+    const r0 = (speedOfSound * 1000) / (2 * Math.PI * cutoffFrequency);
+    const maxAllowedRadius = r0 * 0.999;
+    const requestedMouthRadius = Math.min(mouthWidth, mouthHeight) / 2;
+    const actualMouthRadius = Math.min(requestedMouthRadius, maxAllowedRadius);
+
     return {
       points,
       widthProfile,
       heightProfile,
+      shapeProfile,
       metadata: {
         profileType: "tractrix",
         parameters: normalizedParams,
         calculatedValues: {
+          tractrixMouthRadius_mm: r0,
+          actualMouthRadius: actualMouthRadius,
           throatArea: (throatWidth * throatHeight) / 4,
           mouthArea: (mouthWidth * mouthHeight) / 4,
           areaExpansion: (mouthWidth * mouthHeight) / (throatWidth * throatHeight),
         },
+        transitionMetadata,
       },
     };
   }

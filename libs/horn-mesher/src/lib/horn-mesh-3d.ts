@@ -14,6 +14,7 @@ import { mergeMeshData } from "./mesh-utils";
 import { calculateDimensionsAt, trimProfileAtStart, trimProfileAtEnd } from "./profile-utils";
 import { calculatePerimeter } from "./point-utils";
 import { MESH_DEFAULTS } from "./constants";
+import { morphCrossSectionShapes } from "./shape-morphing";
 
 /**
  * Generate a 3D horn mesh with support for various cross-sections and integrated mounts
@@ -951,7 +952,12 @@ function generateHornBodyMesh(
   originalProfile: ProfileXY,
   resolution: number,
 ): MeshData {
-  const { mode, widthProfile, heightProfile } = geometry;
+  const { mode, widthProfile, heightProfile, shapeProfile } = geometry;
+
+  // Check if we have shape transitions
+  const hasShapeTransition =
+    shapeProfile && shapeProfile.some((sp) => sp.morphingFactor > 0 && sp.morphingFactor < 1);
+
   const vertices: number[] = [];
   const indices: number[] = [];
   const normals: number[] = [];
@@ -974,8 +980,45 @@ function generateHornBodyMesh(
       geometry.height,
     );
 
-    // Generate cross-section at this position
-    const crossSection = generateCrossSection(mode, point.y, width, height, circumferenceSteps);
+    let crossSection;
+
+    if (hasShapeTransition && shapeProfile) {
+      // Generate morphed cross-section
+      const shapeData = shapeProfile[i] || shapeProfile[shapeProfile.length - 1];
+
+      if (shapeData.morphingFactor === 0) {
+        // Pure throat shape
+        crossSection = generateCrossSection(
+          geometry.throatShape || mode,
+          point.y,
+          width,
+          height,
+          circumferenceSteps,
+        );
+      } else if (shapeData.morphingFactor === 1) {
+        // Pure mouth shape
+        crossSection = generateCrossSection(
+          geometry.mouthShape || mode,
+          point.y,
+          width,
+          height,
+          circumferenceSteps,
+        );
+      } else {
+        // Morphed shape
+        crossSection = morphCrossSectionShapes({
+          sourceShape: geometry.throatShape || mode,
+          targetShape: geometry.mouthShape || mode,
+          morphFactor: shapeData.morphingFactor,
+          width,
+          height,
+          resolution: circumferenceSteps,
+        });
+      }
+    } else {
+      // Existing behavior - uniform shape
+      crossSection = generateCrossSection(mode, point.y, width, height, circumferenceSteps);
+    }
 
     // Add vertices and normals for this cross-section
     for (const csPoint of crossSection) {

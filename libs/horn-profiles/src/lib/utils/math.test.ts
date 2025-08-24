@@ -8,7 +8,7 @@ import {
   safeSqrt,
   safeLog,
   safeDivide,
-} from "../../src/utils/math";
+} from "./math";
 
 describe("Math Utilities", () => {
   describe("degreesToRadians", () => {

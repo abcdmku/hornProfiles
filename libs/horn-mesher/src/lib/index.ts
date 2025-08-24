@@ -18,6 +18,10 @@ export { generateDriverMount, generateHornMount, mergeMeshData } from "./mounts"
 // Cross-section generation
 export { generateCrossSectionPoints, generateCrossSection } from "./cross-section";
 
+// Shape morphing utilities
+export { morphCrossSectionShapes } from "./shape-morphing";
+export type { ShapeMorphParams } from "./shape-morphing";
+
 // Point utilities
 export type { Point2D } from "./point-utils";
 export { removeDuplicatePoints, toPolyPoints, calculatePerimeter } from "./point-utils";

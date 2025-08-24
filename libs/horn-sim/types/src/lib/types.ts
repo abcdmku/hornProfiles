@@ -30,15 +30,26 @@ export interface MountOffsets {
   hornMountOffset?: number; // Distance from mouth
 }
 
+export interface ShapePoint {
+  x: number; // Axial position
+  shape: CrossSectionMode | "morphed";
+  morphingFactor: number; // 0 = throat shape, 1 = mouth shape
+  width: number;
+  height: number;
+}
+
 export interface HornGeometry {
   mode: CrossSectionMode;
   profile: ProfileXY; // axial profile
   widthProfile?: ProfileXY; // separate width profile for non-circular horns
   heightProfile?: ProfileXY; // separate height profile for non-circular horns
+  shapeProfile?: ShapePoint[]; // shape at each axial position for morphing
   width?: number; // mm, for non-circular mouths
   height?: number; // mm, for non-circular mouths
   throatRadius: number; // mm
   wallThickness?: number; // mm - horn wall thickness
+  throatShape?: CrossSectionMode; // shape at throat
+  mouthShape?: CrossSectionMode; // shape at mouth
   driverMount?: DriverMountConfig;
   hornMount?: HornMountConfig;
 }

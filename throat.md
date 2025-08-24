@@ -1,0 +1,1 @@
+Add support for defining the throat and mouth with different shapes. When the throat and mouth shapes differ, the system should generate a smooth transition between them. The transition length should be configurable, allowing the user to control how gradually the geometry morphs from the throat shape to the mouth shape.
