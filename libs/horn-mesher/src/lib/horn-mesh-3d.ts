@@ -149,6 +149,18 @@ function generateIntegratedHornBody(
       );
 
       meshes.push(outerMountMesh);
+
+      // Add connection between inner and outer mount faces at their outer edges
+      const edgeConnection = generateMountEdgeConnection(
+        mountPosition, // Inner mount position
+        offsetPosition, // Outer mount position
+        geometry.driverMount.outerDiameter, // Width
+        geometry.driverMount.outerDiameter, // Height (circular)
+        "circle", // Driver mount is always circular
+        0, // No additional extension for driver mount edge
+        resolution,
+      );
+      meshes.push(edgeConnection);
     } else if (!hasWallThickness && geometry.driverMount.thickness > 0) {
       // Single-walled horn: add mount face at offset position
       const offsetPosition = mountPosition + geometry.driverMount.thickness;
@@ -286,6 +298,18 @@ function generateIntegratedHornBody(
       );
 
       meshes.push(outerMountMesh);
+
+      // Add connection between inner and outer mount faces at their outer edges
+      const edgeConnection = generateMountEdgeConnection(
+        mountPosition, // Inner mount position (at mouth)
+        offsetPosition, // Outer mount position (offset inward)
+        originalMouthWidth, // Original mouth width
+        originalMouthHeight, // Original mouth height
+        geometry.mode, // Use the horn's cross-section mode
+        geometry.hornMount.widthExtension, // Extension amount
+        resolution,
+      );
+      meshes.push(edgeConnection);
     } else if (!hasWallThickness && geometry.hornMount.thickness > 0) {
       // Single-walled horn: add mount face at offset position
       const offsetPosition = mountPosition - geometry.hornMount.thickness;
@@ -540,6 +564,133 @@ function connectWalls(
       indices.push(inner2, outer2, outer1);
     }
   }
+}
+
+/**
+ * Generate a connection between two mount faces at their outer edges
+ * Supports different cross-section shapes for horn mounts
+ */
+function generateMountEdgeConnection(
+  innerMountPosition: number,
+  outerMountPosition: number,
+  width: number,
+  height: number,
+  mode: CrossSectionMode,
+  mountExtension: number,
+  resolution: number,
+): MeshData {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+
+  const circumferenceSteps = resolution;
+
+  // Calculate the actual outer dimensions including extension
+  const extensionFactor = 1 + mountExtension / Math.max(width, height);
+  const outerWidth = (width / 2) * extensionFactor;
+  const outerHeight = (height / 2) * extensionFactor;
+
+  // Generate outer edge points based on cross-section mode
+  const generateOuterEdge = (
+    mode: CrossSectionMode,
+    width: number,
+    height: number,
+  ): { y: number; z: number }[] => {
+    const points: { y: number; z: number }[] = [];
+
+    if (mode === "circle") {
+      const radius = Math.max(width, height);
+      for (let i = 0; i < circumferenceSteps; i++) {
+        const angle = (i / circumferenceSteps) * 2 * Math.PI;
+        points.push({
+          y: radius * Math.cos(angle),
+          z: radius * Math.sin(angle),
+        });
+      }
+    } else if (mode === "ellipse") {
+      for (let i = 0; i < circumferenceSteps; i++) {
+        const angle = (i / circumferenceSteps) * 2 * Math.PI;
+        points.push({
+          y: width * Math.cos(angle),
+          z: height * Math.sin(angle),
+        });
+      }
+    } else if (mode === "rectangular") {
+      // Generate rectangular perimeter points
+      // This is simplified - actual implementation would need rounded corners
+      for (let i = 0; i < circumferenceSteps; i++) {
+        const t = i / circumferenceSteps;
+        const perimeter = 2 * (width + height);
+        const pos = t * perimeter;
+
+        let y, z;
+        if (pos < width) {
+          y = pos - width / 2;
+          z = height / 2;
+        } else if (pos < width + height) {
+          y = width / 2;
+          z = height / 2 - (pos - width);
+        } else if (pos < 2 * width + height) {
+          y = width / 2 - (pos - width - height);
+          z = -height / 2;
+        } else {
+          y = -width / 2;
+          z = -height / 2 + (pos - 2 * width - height);
+        }
+        points.push({ y, z });
+      }
+    }
+
+    return points;
+  };
+
+  const edgePoints = generateOuterEdge(mode, outerWidth, outerHeight);
+
+  // Generate vertices for inner mount edge (at innerMountPosition)
+  for (const point of edgePoints) {
+    vertices.push(innerMountPosition, point.y, point.z);
+
+    // Normal pointing outward
+    const len = Math.sqrt(point.y * point.y + point.z * point.z);
+    if (len > 0) {
+      normals.push(0, point.y / len, point.z / len);
+    } else {
+      normals.push(0, 0, 1);
+    }
+  }
+
+  // Generate vertices for outer mount edge (at outerMountPosition)
+  for (const point of edgePoints) {
+    vertices.push(outerMountPosition, point.y, point.z);
+
+    // Normal pointing outward
+    const len = Math.sqrt(point.y * point.y + point.z * point.z);
+    if (len > 0) {
+      normals.push(0, point.y / len, point.z / len);
+    } else {
+      normals.push(0, 0, 1);
+    }
+  }
+
+  // Generate triangles to connect the two rings
+  for (let i = 0; i < circumferenceSteps; i++) {
+    const j = (i + 1) % circumferenceSteps;
+
+    const inner1 = i;
+    const inner2 = j;
+    const outer1 = circumferenceSteps + i;
+    const outer2 = circumferenceSteps + j;
+
+    // Create two triangles for each quad
+    indices.push(inner1, inner2, outer1);
+    indices.push(inner2, outer2, outer1);
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+    normals: new Float32Array(normals),
+  };
 }
 
 /**
