@@ -59,10 +59,18 @@ export function App(): React.JSX.Element {
       };
 
       // Additional validation: mouth must be larger than throat
-      if (params.mouthWidth < params.throatWidth) {
+      if (
+        params.mouthWidth !== undefined &&
+        params.throatWidth !== undefined &&
+        params.mouthWidth < params.throatWidth
+      ) {
         params.mouthWidth = Math.max(params.throatWidth * 1.1, params.mouthWidth);
       }
-      if (params.mouthHeight < params.throatHeight) {
+      if (
+        params.mouthHeight !== undefined &&
+        params.throatHeight !== undefined &&
+        params.mouthHeight < params.throatHeight
+      ) {
         params.mouthHeight = Math.max(params.throatHeight * 1.1, params.mouthHeight);
       }
 
@@ -91,7 +99,6 @@ export function App(): React.JSX.Element {
   const [mouthLocked, setMouthLocked] = useState(true);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [wireframe, setWireframe] = useState(false);
-  const [meshMode, setMeshMode] = useState<"circle" | "ellipse" | "rectangular">("circle");
   const [meshResolution, setMeshResolution] = useState(50);
   const [wallThickness, setWallThickness] = useState(0);
 
@@ -119,6 +126,10 @@ export function App(): React.JSX.Element {
       // Additional safety check before calling generateProfile
       if (
         !parameters ||
+        parameters.throatWidth === undefined ||
+        parameters.throatHeight === undefined ||
+        parameters.mouthWidth === undefined ||
+        parameters.mouthHeight === undefined ||
         !isFinite(parameters.throatWidth) ||
         !isFinite(parameters.throatHeight) ||
         !isFinite(parameters.mouthWidth) ||
@@ -159,17 +170,20 @@ export function App(): React.JSX.Element {
 
     try {
       const hornGeometry: HornGeometry = {
-        mode: meshMode,
+        mode: throatShape as "circle" | "ellipse" | "rectangular", // Use throat shape as base mode
         profile: profile.points,
         widthProfile: profile.widthProfile,
         heightProfile: profile.heightProfile,
+        shapeProfile: profile.shapeProfile, // Include shape profile for transitions
         throatRadius:
           Math.min(
-            profile.metadata.parameters.throatWidth,
-            profile.metadata.parameters.throatHeight,
+            profile.metadata.parameters.throatWidth || 50,
+            profile.metadata.parameters.throatHeight || 50,
           ) / 2,
-        width: profile.metadata.parameters.mouthWidth,
-        height: profile.metadata.parameters.mouthHeight,
+        width: profile.metadata.parameters.mouthWidth || 600,
+        height: profile.metadata.parameters.mouthHeight || 600,
+        throatShape: throatShape as "circle" | "ellipse" | "rectangular",
+        mouthShape: mouthShape as "circle" | "ellipse" | "rectangular",
         wallThickness: wallThickness > 0 ? wallThickness : undefined,
         driverMount: driverMount.enabled ? driverMount : undefined,
         hornMount: hornMount.enabled ? hornMount : undefined,
@@ -187,7 +201,7 @@ export function App(): React.JSX.Element {
       console.warn("Mesh generation failed:", error);
       return null;
     }
-  }, [profile, meshMode, meshResolution, wallThickness, driverMount, hornMount]);
+  }, [profile, throatShape, mouthShape, meshResolution, wallThickness, driverMount, hornMount]);
 
   const handleParameterChange = useCallback(
     (key: string, value: string): void => {
@@ -367,7 +381,11 @@ export function App(): React.JSX.Element {
                     <NumericInput
                       id="throat-width"
                       label="Width"
-                      value={inputValues.throatWidth}
+                      value={
+                        inputValues.throatWidth === ""
+                          ? ""
+                          : parseFloat(inputValues.throatWidth) || ""
+                      }
                       min={PARAMETER_CONSTRAINTS.throatWidth.min}
                       max={PARAMETER_CONSTRAINTS.throatWidth.max}
                       onChange={(value) => handleParameterChange("throatWidth", value)}
@@ -376,7 +394,11 @@ export function App(): React.JSX.Element {
                     <NumericInput
                       id="throat-height"
                       label="Height"
-                      value={inputValues.throatHeight}
+                      value={
+                        inputValues.throatHeight === ""
+                          ? ""
+                          : parseFloat(inputValues.throatHeight) || ""
+                      }
                       min={PARAMETER_CONSTRAINTS.throatHeight.min}
                       max={PARAMETER_CONSTRAINTS.throatHeight.max}
                       onChange={(value) => handleParameterChange("throatHeight", value)}
@@ -434,7 +456,11 @@ export function App(): React.JSX.Element {
                     <NumericInput
                       id="mouth-width"
                       label="Width"
-                      value={inputValues.mouthWidth}
+                      value={
+                        inputValues.mouthWidth === ""
+                          ? ""
+                          : parseFloat(inputValues.mouthWidth) || ""
+                      }
                       min={PARAMETER_CONSTRAINTS.mouthWidth.min}
                       max={PARAMETER_CONSTRAINTS.mouthWidth.max}
                       onChange={(value) => handleParameterChange("mouthWidth", value)}
@@ -443,7 +469,11 @@ export function App(): React.JSX.Element {
                     <NumericInput
                       id="mouth-height"
                       label="Height"
-                      value={inputValues.mouthHeight}
+                      value={
+                        inputValues.mouthHeight === ""
+                          ? ""
+                          : parseFloat(inputValues.mouthHeight) || ""
+                      }
                       min={PARAMETER_CONSTRAINTS.mouthHeight.min}
                       max={PARAMETER_CONSTRAINTS.mouthHeight.max}
                       onChange={(value) => handleParameterChange("mouthHeight", value)}
@@ -455,7 +485,7 @@ export function App(): React.JSX.Element {
                 <NumericInput
                   id="length"
                   label="Length"
-                  value={inputValues.length}
+                  value={inputValues.length === "" ? "" : parseFloat(inputValues.length) || ""}
                   min={PARAMETER_CONSTRAINTS.length.min}
                   max={PARAMETER_CONSTRAINTS.length.max}
                   onChange={(value) => handleParameterChange("length", value)}
@@ -465,7 +495,9 @@ export function App(): React.JSX.Element {
                 <NumericInput
                   id="resolution"
                   label="Resolution"
-                  value={inputValues.resolution}
+                  value={
+                    inputValues.resolution === "" ? "" : parseFloat(inputValues.resolution) || ""
+                  }
                   min={PARAMETER_CONSTRAINTS.resolution.min}
                   max={PARAMETER_CONSTRAINTS.resolution.max}
                   onChange={(value) => handleParameterChange("resolution", value)}
@@ -474,7 +506,11 @@ export function App(): React.JSX.Element {
                 <NumericInput
                   id="speed-of-sound"
                   label="Speed of Sound"
-                  value={inputValues.speedOfSound}
+                  value={
+                    inputValues.speedOfSound === ""
+                      ? ""
+                      : parseFloat(inputValues.speedOfSound) || ""
+                  }
                   min={PARAMETER_CONSTRAINTS.speedOfSound.min}
                   max={PARAMETER_CONSTRAINTS.speedOfSound.max}
                   onChange={(value) => handleParameterChange("speedOfSound", value)}
@@ -544,7 +580,11 @@ export function App(): React.JSX.Element {
                   <NumericInput
                     id="transition-length"
                     label="Transition Length"
-                    value={inputValues.transitionLength}
+                    value={
+                      inputValues.transitionLength === ""
+                        ? ""
+                        : parseFloat(inputValues.transitionLength) || ""
+                    }
                     min={10}
                     max={10000}
                     onChange={(value) => handleParameterChange("transitionLength", value)}
@@ -580,27 +620,6 @@ export function App(): React.JSX.Element {
                 {viewMode === "3d" && (
                   <div className="space-y-3 pt-3 border-t border-slate-700/50">
                     <h3 className="text-sm font-medium text-slate-300">3D View Options</h3>
-
-                    <div>
-                      <label
-                        htmlFor="mesh-mode"
-                        className="block text-sm font-medium text-slate-300 mb-2"
-                      >
-                        Cross Section
-                      </label>
-                      <select
-                        id="mesh-mode"
-                        value={meshMode}
-                        onChange={(e) =>
-                          setMeshMode(e.currentTarget.value as "circle" | "ellipse" | "rectangular")
-                        }
-                        className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      >
-                        <option value="circle">Circle</option>
-                        <option value="ellipse">Ellipse</option>
-                        <option value="rectangular">Rectangular</option>
-                      </select>
-                    </div>
 
                     <div>
                       <label
@@ -952,7 +971,7 @@ export function App(): React.JSX.Element {
                     showGrid={true}
                     gridPosition={[
                       0,
-                      -Math.min(parameters.throatWidth, parameters.throatHeight) / 2,
+                      -Math.min(parameters.throatWidth || 50, parameters.throatHeight || 50) / 2,
                       0,
                     ]}
                   />
