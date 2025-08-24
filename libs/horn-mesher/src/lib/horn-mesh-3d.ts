@@ -643,28 +643,45 @@ function generateMountEdgeConnection(
         });
       }
     } else if (mode === "rectangular") {
-      // Generate rectangular perimeter points
-      // This is simplified - actual implementation would need rounded corners
-      for (let i = 0; i < circumferenceSteps; i++) {
-        const t = i / circumferenceSteps;
-        const perimeter = 2 * (width + height);
-        const pos = t * perimeter;
+      // Generate rectangular points using the same logic as generateRectanglePoints
+      // This ensures proper alignment with the actual horn cross-sections
+      const pointsPerSide = Math.floor(circumferenceSteps / 4);
+      const remainingPoints = circumferenceSteps - pointsPerSide * 4;
 
-        let y, z;
-        if (pos < width) {
-          y = pos - width / 2;
-          z = height / 2;
-        } else if (pos < width + height) {
-          y = width / 2;
-          z = height / 2 - (pos - width);
-        } else if (pos < 2 * width + height) {
-          y = width / 2 - (pos - width - height);
-          z = -height / 2;
-        } else {
-          y = -width / 2;
-          z = -height / 2 + (pos - 2 * width - height);
-        }
-        points.push({ y, z });
+      // Bottom edge
+      for (let i = 0; i < pointsPerSide; i++) {
+        const t = i / pointsPerSide;
+        points.push({
+          y: -width + t * 2 * width,
+          z: -height,
+        });
+      }
+
+      // Right edge
+      for (let i = 0; i < pointsPerSide; i++) {
+        const t = i / pointsPerSide;
+        points.push({
+          y: width,
+          z: -height + t * 2 * height,
+        });
+      }
+
+      // Top edge
+      for (let i = 0; i < pointsPerSide; i++) {
+        const t = i / pointsPerSide;
+        points.push({
+          y: width - t * 2 * width,
+          z: height,
+        });
+      }
+
+      // Left edge (with remaining points)
+      for (let i = 0; i < pointsPerSide + remainingPoints; i++) {
+        const t = i / (pointsPerSide + remainingPoints);
+        points.push({
+          y: -width,
+          z: height - t * 2 * height,
+        });
       }
     }
 
