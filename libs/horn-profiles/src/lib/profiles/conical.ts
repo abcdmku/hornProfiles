@@ -3,6 +3,22 @@ import { BaseHornProfile } from "./base";
 import { radiansToDegrees } from "../utils/math";
 
 export class ConicalProfile extends BaseHornProfile {
+  protected calculateDimensionsAt(
+    x: number,
+    params: Required<HornProfileParameters>,
+  ): { width: number; height: number } {
+    const { throatWidth, throatHeight, mouthWidth, mouthHeight, length } = params;
+
+    // Linear interpolation for conical profile
+    const widthExpansionRate = (mouthWidth - throatWidth) / length;
+    const heightExpansionRate = (mouthHeight - throatHeight) / length;
+
+    const width = throatWidth + x * widthExpansionRate;
+    const height = throatHeight + x * heightExpansionRate;
+
+    return { width, height };
+  }
+
   generate(params: HornProfileParameters): ProfileGeneratorResult {
     this.validateParameters(params);
     const normalizedParams = this.normalizeParameters(params);
@@ -40,14 +56,20 @@ export class ConicalProfile extends BaseHornProfile {
       points.push({ x, y: avgRadius });
     }
 
+    // Generate shape profile for transitions
+    const shapeProfile = this.generateShapeProfile(normalizedParams);
+    const transitionMetadata = this.generateTransitionMetadata(normalizedParams);
+
     return {
       points,
       widthProfile,
       heightProfile,
+      shapeProfile,
       metadata: {
         profileType: "conical",
         parameters: normalizedParams,
         calculatedValues: {
+          flareAngle: radiansToDegrees(widthFlareAngle), // For backward compatibility
           widthFlareAngle: radiansToDegrees(widthFlareAngle),
           heightFlareAngle: radiansToDegrees(heightFlareAngle),
           widthExpansionRate: widthExpansionRate,
@@ -56,6 +78,7 @@ export class ConicalProfile extends BaseHornProfile {
           mouthArea: (mouthWidth * mouthHeight) / 4,
           areaExpansion: (mouthWidth * mouthHeight) / (throatWidth * throatHeight),
         },
+        transitionMetadata,
       },
     };
   }

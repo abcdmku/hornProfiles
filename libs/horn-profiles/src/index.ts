@@ -2,7 +2,7 @@
 export * from "./lib/types";
 
 // Export profiles
-export { BaseHornProfile } from "./lib/profiles/base";
+export { BaseHornProfile, MORPHING_FUNCTIONS } from "./lib/profiles/base";
 export { ConicalProfile } from "./lib/profiles/conical";
 export { ExponentialProfile } from "./lib/profiles/exponential";
 export { TractrixProfile } from "./lib/profiles/tractrix";

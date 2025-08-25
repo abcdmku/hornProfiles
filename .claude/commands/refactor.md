@@ -1,6 +1,9 @@
-# filename
+# /refactor Command
 
-Refactor TypeScript files following best practices and the refactor.md guide.
+Refactor TypeScript files following **best practices** and the `refactor.md` guide.  
+This includes **analyzing, restructuring, extracting, validating, and cleaning up** code while preserving functionality and improving maintainability.
+
+---
 
 ## Usage
 
@@ -8,77 +11,129 @@ Refactor TypeScript files following best practices and the refactor.md guide.
 /refactor <filename>
 ```
 
-## Examples
-
+### Examples
 ```
 /refactor src/components/UserProfile.tsx
 /refactor src/utils/api.ts
 ```
 
-## What it does
+---
+
+## What it Does
 
 This command will:
 
-1. **Analyze the file** - Read and understand the current implementation
-2. **Identify issues** - Find code smells, type safety issues, and optimization opportunities
-3. **Create a refactoring plan** - Generate a todo list of improvements
-4. **Execute refactoring** - Make incremental changes following best practices
-5. **Validate changes** - Run TypeScript compiler, linter, and tests
-6. **Report results** - Summarize what was improved
+1. **Analyze the file** – Understand its purpose, scope, and dependencies.  
+2. **Identify issues** – Detect code smells, type safety issues, and optimization opportunities.  
+3. **Create a refactoring plan** – Generate a structured todo list of changes.  
+4. **Execute refactoring** – Incrementally apply best practices and improvements.  
+5. **Reorganize codebase** –  
+   - Split large files into smaller modules  
+   - Move extracted code out of the original file  
+   - Remove duplicate/obsolete code from the original file  
+   - Ensure imports are updated across the repo  
+   - Create/update **barrel exports (`index.ts`)** where helpful  
+6. **Validate changes** – Compile, lint, run tests, and check for unused imports.  
+7. **Post-refactor cleanup** – Remove dead code, ensure consistent style, update docs/comments.  
+8. **Report results** – Summarize changes, improvements, and remaining follow-up items.  
+
+---
 
 ## Refactoring Process
 
-The command follows this systematic approach:
-
 ### Phase 1: Analysis
-- Read the entire file and understand its purpose
-- Check for existing tests
-- Analyze dependencies and imports
-- Identify related files in the same directory
-- Check existing code style and conventions
+- Read and understand the entire file  
+- Check for existing tests  
+- Analyze imports, exports, and dependencies  
+- Identify related files in the same directory/module  
+- Note existing conventions and code style  
 
 ### Phase 2: Issue Detection
+
 - **Critical Issues**
-  - Any use of `any` type
-  - Suppressed TypeScript errors (`@ts-ignore`)
-  - Empty catch blocks
-  - Hardcoded credentials or secrets
+  - Any use of `any` type  
+  - Suppressed errors (`@ts-ignore`)  
+  - Empty catch blocks  
+  - Hardcoded secrets/credentials  
 
 - **Code Smells**
-  - Functions longer than 20 lines
-  - Files longer than 200 lines
-  - Deep nesting (>3 levels)
-  - Duplicate code blocks
-  - Mixed abstraction levels
-  - Complex conditionals
-  - Long parameter lists (>3)
-  - Multiple unrelated functions in one file
+  - Functions > 20 lines  
+  - Files > 200 lines  
+  - Deep nesting (>3 levels)  
+  - Duplicate logic  
+  - Mixed abstraction levels  
+  - Long parameter lists (>3)  
+  - Multiple unrelated functions in one file  
 
 - **Performance Issues**
-  - Missing memoization in React components
-  - Unnecessary re-renders
-  - Inefficient loops or computations
+  - Missing memoization (React)  
+  - Inefficient loops  
+  - Unnecessary re-renders  
+  - Heavy computations on render  
 
 ### Phase 3: Refactoring Actions
-- Extract long functions into smaller ones
-- **Split large files into separate modules**
-  - Move each major function to its own file
-  - Group related utility functions together
-  - Create barrel exports (index.ts) for clean imports
-- Convert promises to async/await
-- Replace magic values with constants
-- Add proper TypeScript types
-- Extract custom hooks (React)
-- Simplify complex conditionals
-- Apply dependency injection where needed
-- Optimize performance bottlenecks
+
+- **Code Extraction**
+  - Split large files into smaller modules  
+  - Extract functions, hooks, and utilities into separate files  
+  - Remove original code after extraction (no duplication)  
+  - Create/maintain barrel exports (`index.ts`) for clean imports  
+
+- **Type Safety**
+  - Remove `any` types  
+  - Add proper type annotations  
+  - Introduce type aliases/interfaces  
+  - Use discriminated unions when appropriate  
+
+- **Code Organization**
+  - Apply single responsibility principle  
+  - Group related functionality  
+  - Keep files <200 lines when possible  
+  - Maintain logical module boundaries  
+
+- **Modern Patterns**
+  - Convert callbacks to async/await  
+  - Use optional chaining/nullish coalescing  
+  - Prefer immutability and functional style where appropriate  
+  - Use const assertions for literal values  
+
+- **React Specific**
+  - Extract custom hooks  
+  - Add memoization (`React.memo`, `useMemo`, `useCallback`)  
+  - Optimize rendering logic  
+  - Split large components into smaller subcomponents  
+
+- **Performance**
+  - Optimize loops and computations  
+  - Apply lazy loading when beneficial  
+  - Minimize unnecessary dependencies  
+
+- **Readability**
+  - Simplify complex conditionals  
+  - Replace magic numbers/strings with constants  
+  - Add JSDoc-style comments for exported functions/classes  
 
 ### Phase 4: Validation
-- Run TypeScript compiler (`npx tsc --noEmit`)
-- Run linter (`npm run lint`)
-- Run tests if available (`npm test`)
-- Check for unused imports
-- Verify no console.logs were added
+
+- Run **TypeScript compiler** (`npx tsc --noEmit`)  
+- Run **linter** (`npm run lint`)  
+- Run **tests** if available (`npm test`)  
+- Remove unused imports and variables  
+- Ensure no stray `console.log` statements remain  
+- Validate that barrel exports resolve correctly  
+- Ensure imports are consistent (absolute vs relative paths)  
+
+### Phase 5: Post-Refactor Cleanup
+
+- Remove dead/unused code and files  
+- Ensure consistent file/folder naming conventions  
+- Update inline comments and docstrings  
+- Add/update README or module-level documentation if needed  
+- Verify dependency injection patterns (if used)  
+- Ensure public API surface is intentional (avoid leaking internals)  
+- Double-check cross-module imports after reorganizing  
+
+---
 
 ## Options
 
@@ -86,79 +141,39 @@ You can specify focus areas:
 
 ```
 /refactor src/api.ts types        # Focus on type safety
-/refactor src/Component.tsx perf   # Focus on performance
-/refactor src/service.ts clean     # Focus on code cleanliness
+/refactor src/Component.tsx perf  # Focus on performance
+/refactor src/service.ts clean    # Focus on code organization
 ```
 
-## What gets refactored
-
-Based on the refactor.md guide, the command will:
-
-1. **Type Safety**
-   - Remove all `any` types
-   - Add proper type annotations
-   - Use discriminated unions
-   - Extract type aliases
-
-2. **Code Organization**
-   - Extract functions (>20 lines)
-   - Apply single responsibility principle
-   - Group related functionality
-   - Use proper abstraction levels
-   - **Break large files into separate modules**
-     - Extract each major function to its own file
-     - Keep logical groupings of related utility functions
-     - Maintain overall file length under 200 lines
-     - Create index files for re-exporting when needed
-
-3. **Modern Patterns**
-   - Convert callbacks to async/await
-   - Use optional chaining and nullish coalescing
-   - Apply functional programming where appropriate
-   - Use const assertions for literals
-
-4. **React Specific** (if applicable)
-   - Extract custom hooks
-   - Add proper memoization
-   - Optimize re-renders
-   - Split large components
-
-5. **Performance**
-   - Add appropriate memoization
-   - Optimize loops and computations
-   - Lazy load when beneficial
-   - Remove unnecessary dependencies
+---
 
 ## Safety Features
 
-The command includes safety measures:
-- Creates a todo list for complex refactors
-- Makes incremental changes
-- Validates after each major change
-- Preserves existing functionality
-- Follows existing code conventions
-- Can rollback if issues arise
+- Creates a **todo list** for complex refactors  
+- Makes incremental, reversible changes  
+- Preserves existing functionality  
+- Follows existing conventions  
+- Validates after each major change  
+- Can rollback if validation fails  
+
+---
 
 ## Output
 
-After refactoring, you'll receive:
-- Summary of changes made
-- List of improvements
-- Any remaining issues that need manual review
-- Test results (if tests exist)
-- Performance impact (if measurable)
+After refactoring, you’ll receive:  
+- Summary of changes made  
+- List of improvements applied  
+- Any remaining issues that need manual review  
+- Validation results (TS, lint, tests)  
+- Performance impact (if measurable)  
+- Suggested follow-up tasks (e.g. adding missing tests)  
+
+---
 
 ## Notes
 
-- The command requires the file to exist
-- Works best with TypeScript files (.ts, .tsx)
-- Follows the project's existing conventions
-- Won't introduce new dependencies without asking
-- Preserves all existing functionality
-- Creates clean, readable, maintainable code
-
-## Related Commands
-
-- `/analyze` - Analyze code without refactoring
-- `/test` - Run tests for a file
-- `/lint` - Check linting issues
+- Requires the file to exist  
+- Best with `.ts` and `.tsx` files  
+- Won’t introduce new dependencies without asking  
+- Preserves existing functionality  
+- Creates **clean, readable, maintainable code**  

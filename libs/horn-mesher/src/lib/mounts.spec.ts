@@ -8,7 +8,7 @@ describe("Mount Triangulation", () => {
         0, // throatPosition
         50, // throatWidth
         50, // throatHeight
-        "circle", // throatMode
+        "ellipse", // throatMode
         {
           enabled: true,
           outerDiameter: 150,
@@ -87,7 +87,7 @@ describe("Mount Triangulation", () => {
         0,
         140,
         140,
-        "circle", // Large throat that overlaps with bolt holes
+        "ellipse", // Large throat that overlaps with bolt holes
         {
           enabled: true,
           outerDiameter: 150, // Small outer diameter
@@ -110,7 +110,7 @@ describe("Mount Triangulation", () => {
         100, // mouthPosition
         80, // mouthWidth
         80, // mouthHeight
-        "circle", // mouthMode
+        "ellipse", // mouthMode
         {
           enabled: true,
           widthExtension: 30,
@@ -183,7 +183,7 @@ describe("Mount Triangulation", () => {
         100,
         200,
         200,
-        "circle", // Large mouth
+        "ellipse", // Large mouth
         {
           enabled: true,
           widthExtension: 20,
@@ -202,7 +202,7 @@ describe("Mount Triangulation", () => {
         50,
         20,
         20,
-        "circle", // Small mouth
+        "ellipse", // Small mouth
         {
           enabled: true,
           widthExtension: 10,
@@ -224,7 +224,7 @@ describe("Mount Triangulation", () => {
         0,
         50,
         50,
-        "circle",
+        "ellipse",
         {
           enabled: true,
           outerDiameter: 150,
@@ -245,7 +245,7 @@ describe("Mount Triangulation", () => {
         0,
         40,
         40,
-        "circle",
+        "ellipse",
         {
           enabled: true,
           outerDiameter: 120,
@@ -270,8 +270,8 @@ describe("Mount Triangulation", () => {
         boltCount: 5,
       };
 
-      const mesh1 = generateDriverMount(0, 45, 45, "circle", config, 32);
-      const mesh2 = generateDriverMount(0, 45, 45, "circle", config, 32);
+      const mesh1 = generateDriverMount(0, 45, 45, "ellipse", config, 32);
+      const mesh2 = generateDriverMount(0, 45, 45, "ellipse", config, 32);
 
       // Should produce identical meshes
       expect(mesh1.vertices.length).toBe(mesh2.vertices.length);

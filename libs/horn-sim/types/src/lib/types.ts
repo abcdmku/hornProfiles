@@ -1,12 +1,7 @@
 export type ProfilePoint = { x: number; y: number }; // mm
 export type ProfileXY = ProfilePoint[];
 
-export type CrossSectionMode =
-  | "circle"
-  | "ellipse"
-  | "superellipse"
-  | "rectangular"
-  | "stereographic";
+export type CrossSectionMode = "ellipse" | "superellipse" | "rectangular" | "stereographic";
 
 export interface DriverMountConfig {
   enabled: boolean;
@@ -14,6 +9,7 @@ export interface DriverMountConfig {
   boltHoleDiameter: number; // mm
   boltCircleDiameter: number; // mm
   boltCount: number; // Number of bolts
+  thickness: number; // mm - mount thickness/offset from throat
 }
 
 export interface HornMountConfig {
@@ -21,6 +17,20 @@ export interface HornMountConfig {
   widthExtension: number; // mm added to mouth width
   boltSpacing: number; // max mm between bolts
   boltHoleDiameter: number; // mm
+  thickness: number; // mm - mount thickness/offset from mouth
+}
+
+export interface MountOffsets {
+  driverMountOffset?: number; // Distance from throat
+  hornMountOffset?: number; // Distance from mouth
+}
+
+export interface ShapePoint {
+  x: number; // Axial position
+  shape: CrossSectionMode | "morphed";
+  morphingFactor: number; // 0 = throat shape, 1 = mouth shape
+  width: number;
+  height: number;
 }
 
 export interface HornGeometry {
@@ -28,9 +38,15 @@ export interface HornGeometry {
   profile: ProfileXY; // axial profile
   widthProfile?: ProfileXY; // separate width profile for non-circular horns
   heightProfile?: ProfileXY; // separate height profile for non-circular horns
+  shapeProfile?: ShapePoint[]; // shape at each axial position for morphing
   width?: number; // mm, for non-circular mouths
   height?: number; // mm, for non-circular mouths
   throatRadius: number; // mm
+  throatWidth?: number; // mm, throat width for non-circular throats
+  throatHeight?: number; // mm, throat height for non-circular throats
+  wallThickness?: number; // mm - horn wall thickness
+  throatShape?: CrossSectionMode; // shape at throat
+  mouthShape?: CrossSectionMode; // shape at mouth
   driverMount?: DriverMountConfig;
   hornMount?: HornMountConfig;
 }

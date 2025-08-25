@@ -1,11 +1,11 @@
-import { createRouter, eventHandler, readBody } from "h3";
+import { createRouter, eventHandler, readBody, type Router } from "h3";
 import { z } from "zod";
-import { SimulationRequest } from "../../../../libs/horn-sim/types/src/lib/types";
+import { SimulationRequest } from "@horn-sim/types";
 import { simulationQueue } from "../lib/queue";
 
 const SimulationRequestSchema = z.object({
   geometry: z.object({
-    mode: z.enum(["circle", "ellipse", "superellipse", "rectangular", "stereographic"]),
+    mode: z.enum(["ellipse", "superellipse", "rectangular", "stereographic"]),
     profile: z.array(z.object({ x: z.number(), y: z.number() })),
     width: z.number().optional(),
     height: z.number().optional(),
@@ -28,7 +28,7 @@ const SimulationRequestSchema = z.object({
   }),
 });
 
-export function createSimulationRoutes() {
+export function createSimulationRoutes(): Router {
   const router = createRouter();
 
   // POST /api/simulate - Enqueue simulation

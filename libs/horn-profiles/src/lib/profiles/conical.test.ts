@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { ConicalProfile } from "../../src/profiles/conical";
-import { HornProfileParameters } from "../../src/types";
+import { ConicalProfile } from "./conical";
+import { HornProfileParameters } from "../types";
 
 describe("ConicalProfile", () => {
   const profile = new ConicalProfile();

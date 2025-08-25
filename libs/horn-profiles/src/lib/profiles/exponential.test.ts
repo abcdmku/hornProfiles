@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { ExponentialProfile } from "../../src/profiles/exponential";
-import { HornProfileParameters } from "../../src/types";
+import { ExponentialProfile } from "./exponential";
+import { HornProfileParameters } from "../types";
 
 describe("ExponentialProfile", () => {
   const profile = new ExponentialProfile();

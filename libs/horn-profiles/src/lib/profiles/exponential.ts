@@ -3,6 +3,22 @@ import { BaseHornProfile } from "./base";
 import { safeLog } from "../utils/math";
 
 export class ExponentialProfile extends BaseHornProfile {
+  protected calculateDimensionsAt(
+    x: number,
+    params: Required<HornProfileParameters>,
+  ): { width: number; height: number } {
+    const { throatWidth, throatHeight, mouthWidth, mouthHeight, length } = params;
+
+    // Exponential expansion
+    const widthFlareConstant = (2 * safeLog(mouthWidth / throatWidth)) / length;
+    const heightFlareConstant = (2 * safeLog(mouthHeight / throatHeight)) / length;
+
+    const width = throatWidth * Math.exp((widthFlareConstant * x) / 2);
+    const height = throatHeight * Math.exp((heightFlareConstant * x) / 2);
+
+    return { width, height };
+  }
+
   generate(params: HornProfileParameters): ProfileGeneratorResult {
     this.validateParameters(params);
     const normalizedParams = this.normalizeParameters(params);
@@ -38,20 +54,33 @@ export class ExponentialProfile extends BaseHornProfile {
       points.push({ x, y: avgRadius });
     }
 
+    // Generate shape profile for transitions
+    const shapeProfile = this.generateShapeProfile(normalizedParams);
+    const transitionMetadata = this.generateTransitionMetadata(normalizedParams);
+
+    // Calculate additional values for backward compatibility
+    const { cutoffFrequency, speedOfSound } = normalizedParams;
+    const flareConstant = (widthFlareConstant + heightFlareConstant) / 2;
+    const theoreticalFlareConstant = (4 * Math.PI * cutoffFrequency) / speedOfSound;
+
     return {
       points,
       widthProfile,
       heightProfile,
+      shapeProfile,
       metadata: {
         profileType: "exponential",
         parameters: normalizedParams,
         calculatedValues: {
+          flareConstant,
+          theoreticalFlareConstant,
           widthFlareConstant,
           heightFlareConstant,
           throatArea: (throatWidth * throatHeight) / 4,
           mouthArea: (mouthWidth * mouthHeight) / 4,
           areaExpansion: (mouthWidth * mouthHeight) / (throatWidth * throatHeight),
         },
+        transitionMetadata,
       },
     };
   }
