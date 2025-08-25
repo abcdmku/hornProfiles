@@ -274,21 +274,57 @@ function normalizeRectangularPointSet(points: Point2D[], targetResolution: numbe
     return normalized;
   }
 
-  // Sort corners by angle to ensure proper order
-  corners.sort((a, b) => {
-    const angleA = Math.atan2(a.point.z, a.point.y);
-    const angleB = Math.atan2(b.point.z, b.point.y);
-    return angleA - angleB;
-  });
+  // CRITICAL FIX: Use consistent ordering with ellipse (top → left → bottom → right)
+  // Don't sort by angle as it can disrupt proper point correspondence
 
-  // Distribute points along the rectangle edges
+  // Find corners in the proper order to match ellipse traversal
+  const orderedCorners: Point2D[] = [];
+
+  // Find each corner by position (using tolerance for floating point comparison)
+  const cornerTolerance = 1e-6;
+  const halfWidth = Math.max(...corners.map((c) => Math.abs(c.point.y)));
+  const halfHeight = Math.max(...corners.map((c) => Math.abs(c.point.z)));
+
+  // Start from top-left and find corners in counter-clockwise order (like ellipse)
+  const cornerPositions = [
+    { y: -halfWidth, z: halfHeight }, // Top-left (start point like ellipse at π/2)
+    { y: -halfWidth, z: -halfHeight }, // Bottom-left
+    { y: halfWidth, z: -halfHeight }, // Bottom-right
+    { y: halfWidth, z: halfHeight }, // Top-right
+  ];
+
+  // Match detected corners to expected positions
+  for (const expectedPos of cornerPositions) {
+    const matchingCorner = corners.find(
+      (c) =>
+        Math.abs(c.point.y - expectedPos.y) < cornerTolerance &&
+        Math.abs(c.point.z - expectedPos.z) < cornerTolerance,
+    );
+    if (matchingCorner) {
+      orderedCorners.push(matchingCorner.point);
+    } else {
+      // If we can't find the exact corner, use the expected position
+      orderedCorners.push(expectedPos);
+    }
+  }
+
+  // Distribute points along the rectangle edges in counter-clockwise order
   const normalized: Point2D[] = [];
   const pointsPerEdge = Math.floor(targetResolution / 4);
   const remainder = targetResolution % 4;
 
+  // Start from top-left and go counter-clockwise: top-left → bottom-left → bottom-right → top-right
+  const edgeSequence = [
+    [0, 1], // Top-left to bottom-left
+    [1, 2], // Bottom-left to bottom-right
+    [2, 3], // Bottom-right to top-right
+    [3, 0], // Top-right to top-left (closes the loop)
+  ];
+
   for (let edge = 0; edge < 4; edge++) {
-    const startCorner = corners[edge].point;
-    const endCorner = corners[(edge + 1) % 4].point;
+    const [startIdx, endIdx] = edgeSequence[edge];
+    const startCorner = orderedCorners[startIdx];
+    const endCorner = orderedCorners[endIdx];
     const edgePoints = pointsPerEdge + (edge < remainder ? 1 : 0);
 
     // Add points along this edge (excluding the end corner to avoid duplicates)

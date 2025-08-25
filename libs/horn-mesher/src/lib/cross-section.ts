@@ -126,57 +126,63 @@ function generateRectanglePoints(
     edgeIndex = (edgeIndex + 1) % 4;
   }
 
-  // For rectangles, we should start from a corner, not the middle of an edge
-  // This ensures proper mesh generation and avoids chamfered corners
+  // CRITICAL FIX: Start from top (like ellipse) and go counter-clockwise
+  // This ensures proper point correspondence with elliptical shapes during morphing
   const result: Point2D[] = [];
 
-  // Start from top-right corner and go clockwise
-  // This ensures the first point is always a corner
+  // Define corners in counter-clockwise order starting from top-left (like ellipse at π/2)
+  // This prevents the horn self-intersection when morphing rectangular to elliptical shapes
+  const orderedCorners = [
+    { y: -halfWidth, z: halfHeight }, // Top-left corner (start like ellipse at top)
+    { y: -halfWidth, z: -halfHeight }, // Bottom-left corner
+    { y: halfWidth, z: -halfHeight }, // Bottom-right corner
+    { y: halfWidth, z: halfHeight }, // Top-right corner
+  ];
 
-  // Top-right corner FIRST
-  result.push(corners[0]);
+  // Start from top-left and go counter-clockwise like ellipse
+  result.push(orderedCorners[0]); // Top-left corner
 
-  // Right edge interior points
-  for (let i = 0; i < pointsPerEdge[0]; i++) {
-    const t = (i + 1) / (pointsPerEdge[0] + 1);
-    result.push({
-      y: halfWidth,
-      z: halfHeight - t * 2 * halfHeight,
-    });
-  }
-
-  // Bottom-right corner
-  result.push(corners[1]);
-
-  // Bottom edge interior points
-  for (let i = 0; i < pointsPerEdge[1]; i++) {
-    const t = (i + 1) / (pointsPerEdge[1] + 1);
-    result.push({
-      y: halfWidth - t * 2 * halfWidth,
-      z: -halfHeight,
-    });
-  }
-
-  // Bottom-left corner
-  result.push(corners[2]);
-
-  // Left edge interior points
+  // Left edge (top to bottom)
   for (let i = 0; i < pointsPerEdge[2]; i++) {
     const t = (i + 1) / (pointsPerEdge[2] + 1);
     result.push({
       y: -halfWidth,
+      z: halfHeight - t * 2 * halfHeight,
+    });
+  }
+
+  // Bottom-left corner
+  result.push(orderedCorners[1]);
+
+  // Bottom edge (left to right)
+  for (let i = 0; i < pointsPerEdge[1]; i++) {
+    const t = (i + 1) / (pointsPerEdge[1] + 1);
+    result.push({
+      y: -halfWidth + t * 2 * halfWidth,
+      z: -halfHeight,
+    });
+  }
+
+  // Bottom-right corner
+  result.push(orderedCorners[2]);
+
+  // Right edge (bottom to top)
+  for (let i = 0; i < pointsPerEdge[0]; i++) {
+    const t = (i + 1) / (pointsPerEdge[0] + 1);
+    result.push({
+      y: halfWidth,
       z: -halfHeight + t * 2 * halfHeight,
     });
   }
 
-  // Top-left corner
-  result.push(corners[3]);
+  // Top-right corner
+  result.push(orderedCorners[3]);
 
-  // Top edge interior points
+  // Top edge (right to left, back toward start)
   for (let i = 0; i < pointsPerEdge[3]; i++) {
     const t = (i + 1) / (pointsPerEdge[3] + 1);
     result.push({
-      y: -halfWidth + t * 2 * halfWidth,
+      y: halfWidth - t * 2 * halfWidth,
       z: halfHeight,
     });
   }

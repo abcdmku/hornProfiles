@@ -100,7 +100,10 @@
       "Bash(timeout 30 pnpm --filter @horn-sim/horn-viewer dev)",
       "Bash(pnpm --filter @horn-sim/horn-mesher build)",
       "Bash(timeout 30 pnpm --filter horn-viewer dev)",
-      "Bash(npm init:*)"
+      "Bash(npm init:*)",
+      "Bash(npx nx test:*)",
+      "Bash(npx:*)",
+      "Bash(npm exec:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits",
