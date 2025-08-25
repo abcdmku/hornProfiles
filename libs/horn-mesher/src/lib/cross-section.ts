@@ -77,22 +77,23 @@ function generateRectanglePoints(
 
   // Define the 4 corners with EXACT positions for sharp edges
   // CRITICAL: These must be at the exact corner positions
+  // Fixed: Swap width and height for correct orientation
   const corners = [
-    { y: halfWidth, z: halfHeight }, // Top-right
-    { y: halfWidth, z: -halfHeight }, // Bottom-right
-    { y: -halfWidth, z: -halfHeight }, // Bottom-left
-    { y: -halfWidth, z: halfHeight }, // Top-left
+    { y: halfHeight, z: halfWidth }, // Top-right
+    { y: halfHeight, z: -halfWidth }, // Bottom-right
+    { y: -halfHeight, z: -halfWidth }, // Bottom-left
+    { y: -halfHeight, z: halfWidth }, // Top-left
   ];
 
   // For debugging: Ensure corners are at expected positions
   // console.log('Rectangle corners:', corners, 'halfWidth:', halfWidth, 'halfHeight:', halfHeight);
 
-  // Calculate perimeter of each edge
+  // Calculate perimeter of each edge (with swapped dimensions)
   const edgeLengths = [
-    halfHeight * 2, // Right edge (top to bottom)
-    halfWidth * 2, // Bottom edge (right to left)
-    halfHeight * 2, // Left edge (bottom to top)
-    halfWidth * 2, // Top edge (left to right)
+    halfWidth * 2, // Right edge (top to bottom) - now uses width
+    halfHeight * 2, // Bottom edge (right to left) - now uses height
+    halfWidth * 2, // Left edge (bottom to top) - now uses width
+    halfHeight * 2, // Top edge (left to right) - now uses height
   ];
 
   const totalPerimeter = edgeLengths.reduce((sum, len) => sum + len, 0);
@@ -133,48 +134,48 @@ function generateRectanglePoints(
   // Top-right corner FIRST
   result.push(corners[0]);
 
-  // Right edge interior points
+  // Right edge interior points (y is fixed at halfHeight, z varies)
   for (let i = 0; i < pointsPerEdge[0]; i++) {
     const t = (i + 1) / (pointsPerEdge[0] + 1);
     result.push({
-      y: halfWidth,
-      z: halfHeight - t * 2 * halfHeight,
+      y: halfHeight,
+      z: halfWidth - t * 2 * halfWidth,
     });
   }
 
   // Bottom-right corner
   result.push(corners[1]);
 
-  // Bottom edge interior points
+  // Bottom edge interior points (z is fixed at -halfWidth, y varies)
   for (let i = 0; i < pointsPerEdge[1]; i++) {
     const t = (i + 1) / (pointsPerEdge[1] + 1);
     result.push({
-      y: halfWidth - t * 2 * halfWidth,
-      z: -halfHeight,
+      y: halfHeight - t * 2 * halfHeight,
+      z: -halfWidth,
     });
   }
 
   // Bottom-left corner
   result.push(corners[2]);
 
-  // Left edge interior points
+  // Left edge interior points (y is fixed at -halfHeight, z varies)
   for (let i = 0; i < pointsPerEdge[2]; i++) {
     const t = (i + 1) / (pointsPerEdge[2] + 1);
     result.push({
-      y: -halfWidth,
-      z: -halfHeight + t * 2 * halfHeight,
+      y: -halfHeight,
+      z: -halfWidth + t * 2 * halfWidth,
     });
   }
 
   // Top-left corner
   result.push(corners[3]);
 
-  // Top edge interior points (from left to right, back to start)
+  // Top edge interior points (z is fixed at halfWidth, y varies)
   for (let i = 0; i < pointsPerEdge[3]; i++) {
     const t = (i + 1) / (pointsPerEdge[3] + 1);
     result.push({
-      y: -halfWidth + t * 2 * halfWidth,
-      z: halfHeight,
+      y: -halfHeight + t * 2 * halfHeight,
+      z: halfWidth,
     });
   }
 
