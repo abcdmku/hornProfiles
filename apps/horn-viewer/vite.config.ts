@@ -4,9 +4,10 @@ import react from "@vitejs/plugin-react";
 import { nxViteTsPaths } from "@nx/vite/plugins/nx-tsconfig-paths.plugin";
 import { nxCopyAssetsPlugin } from "@nx/vite/plugins/nx-copy-assets.plugin";
 
-export default defineConfig(() => ({
+export default defineConfig(({ command, _mode }) => ({
   root: __dirname,
   cacheDir: "../../node_modules/.vite/apps/horn-viewer",
+  base: command === "build" ? "/hornProfiles/" : "/",
   server: {
     port: 4200,
     host: "localhost",
