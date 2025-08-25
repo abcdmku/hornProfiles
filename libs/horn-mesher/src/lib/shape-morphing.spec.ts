@@ -44,19 +44,39 @@ describe("shape-morphing", () => {
       // at the expected corner positions
       const halfWidth = 20;
       const halfHeight = 15;
-      const tolerance = 1e-6;
+      const tolerance = 1e-10;
 
-      // Find corner points (should be at exactly ±halfWidth, ±halfHeight)
-      const corners = result.filter(
-        (p) =>
-          (Math.abs(Math.abs(p.y) - halfWidth) < tolerance &&
-            Math.abs(p.z) <= halfHeight + tolerance) ||
-          (Math.abs(Math.abs(p.z) - halfHeight) < tolerance &&
-            Math.abs(p.y) <= halfWidth + tolerance),
+      // Find exact corner points
+      const topLeft = result.find(
+        (p) => Math.abs(p.y + halfWidth) < tolerance && Math.abs(p.z - halfHeight) < tolerance,
+      );
+      const topRight = result.find(
+        (p) => Math.abs(p.y - halfWidth) < tolerance && Math.abs(p.z - halfHeight) < tolerance,
+      );
+      const bottomRight = result.find(
+        (p) => Math.abs(p.y - halfWidth) < tolerance && Math.abs(p.z + halfHeight) < tolerance,
+      );
+      const bottomLeft = result.find(
+        (p) => Math.abs(p.y + halfWidth) < tolerance && Math.abs(p.z + halfHeight) < tolerance,
       );
 
-      // Should have at least 4 points very close to the exact corners
-      expect(corners.length).toBeGreaterThanOrEqual(4);
+      // All 4 corners should exist exactly
+      expect(topLeft).toBeDefined();
+      expect(topRight).toBeDefined();
+      expect(bottomRight).toBeDefined();
+      expect(bottomLeft).toBeDefined();
+
+      // Verify points are on rectangle edges only
+      const edgeTolerance = 1e-10;
+      for (const point of result) {
+        const onLeftEdge = Math.abs(point.y + halfWidth) < edgeTolerance;
+        const onRightEdge = Math.abs(point.y - halfWidth) < edgeTolerance;
+        const onTopEdge = Math.abs(point.z - halfHeight) < edgeTolerance;
+        const onBottomEdge = Math.abs(point.z + halfHeight) < edgeTolerance;
+
+        // Every point should be on exactly one edge
+        expect(onLeftEdge || onRightEdge || onTopEdge || onBottomEdge).toBe(true);
+      }
     });
 
     it("should maintain corner sharpness during morphing from rectangular to ellipse", () => {

@@ -48,7 +48,7 @@ function generateEllipsePoints(
 
 /**
  * Generate points for a rectangular cross-section
- * Uses angular distribution for proper morphing correspondence
+ * Uses edge-based distribution to ensure sharp 90-degree corners
  */
 function generateRectanglePoints(
   halfWidth: number,
@@ -57,49 +57,84 @@ function generateRectanglePoints(
 ): Point2D[] {
   const points: Point2D[] = [];
 
-  for (let i = 0; i < resolution; i++) {
-    const angle = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (π/2)
+  // Calculate points per edge, ensuring each edge gets at least 1 point
+  const minPointsPerEdge = Math.max(1, Math.floor(resolution / 4));
+  const remainingPoints = resolution - minPointsPerEdge * 4;
 
-    // Project angle onto rectangle boundary
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
+  // Distribute remaining points proportionally to edge length
+  const perimeter = 2 * (halfWidth + halfHeight);
+  const topBottomLength = 2 * halfWidth;
+  const leftRightLength = 2 * halfHeight;
 
-    // Find intersection with rectangle edges
-    let y: number, z: number;
+  const topBottomExtra = Math.round((remainingPoints * topBottomLength) / perimeter / 2);
+  const leftRightExtra = Math.round((remainingPoints * leftRightLength) / perimeter / 2);
 
-    // Determine which edge the angle intersects
-    // Compare the ray slope against the rectangle corner slopes
-    const absTan = Math.abs(sin / cos);
-    const rectSlope = halfHeight / halfWidth;
+  const topPoints = minPointsPerEdge + topBottomExtra;
+  const rightPoints = minPointsPerEdge + leftRightExtra;
+  const bottomPoints = minPointsPerEdge + topBottomExtra;
+  const leftPoints = resolution - topPoints - rightPoints - bottomPoints;
 
-    if (absTan <= rectSlope) {
-      // Intersects left or right edge
-      if (cos >= 0) {
-        // Right edge
-        y = halfWidth;
-        z = (halfWidth * sin) / cos;
-      } else {
-        // Left edge
-        y = -halfWidth;
-        z = (-halfWidth * sin) / cos;
-      }
-    } else {
-      // Intersects top or bottom edge
-      if (sin >= 0) {
-        // Top edge
-        z = halfHeight;
-        y = (halfHeight * cos) / sin;
-      } else {
-        // Bottom edge
-        z = -halfHeight;
-        y = (-halfHeight * cos) / sin;
-      }
-    }
-
-    points.push({ y, z });
+  // Generate points starting from top edge (positive Z), going clockwise
+  // Top edge: from left to right
+  for (let i = 0; i < topPoints; i++) {
+    const t = i / Math.max(1, topPoints - 1); // 0 to 1, but handle single point case
+    points.push({
+      y: -halfWidth + t * (2 * halfWidth), // -halfWidth to +halfWidth
+      z: halfHeight,
+    });
   }
 
-  return points;
+  // Right edge: from top to bottom (excluding top corner to avoid duplicate)
+  for (let i = 1; i < rightPoints; i++) {
+    const t = i / Math.max(1, rightPoints - 1);
+    points.push({
+      y: halfWidth,
+      z: halfHeight - t * (2 * halfHeight), // +halfHeight to -halfHeight
+    });
+  }
+
+  // Bottom edge: from right to left (excluding right corner)
+  for (let i = 1; i < bottomPoints; i++) {
+    const t = i / Math.max(1, bottomPoints - 1);
+    points.push({
+      y: halfWidth - t * (2 * halfWidth), // +halfWidth to -halfWidth
+      z: -halfHeight,
+    });
+  }
+
+  // Left edge: from bottom to top (excluding bottom corner)
+  for (let i = 1; i < leftPoints; i++) {
+    const t = i / Math.max(1, leftPoints - 1);
+    points.push({
+      y: -halfWidth,
+      z: -halfHeight + t * (2 * halfHeight), // -halfHeight to +halfHeight
+    });
+  }
+
+  // Ensure we have exactly the requested number of points
+  while (points.length < resolution) {
+    // Add extra points on the longest edge
+    const edge = Math.floor(points.length / 4) % 4;
+    const edgeT = (points.length % 4) / 4;
+
+    switch (edge) {
+      case 0: // Top edge
+        points.push({ y: -halfWidth + edgeT * (2 * halfWidth), z: halfHeight });
+        break;
+      case 1: // Right edge
+        points.push({ y: halfWidth, z: halfHeight - edgeT * (2 * halfHeight) });
+        break;
+      case 2: // Bottom edge
+        points.push({ y: halfWidth - edgeT * (2 * halfWidth), z: -halfHeight });
+        break;
+      case 3: // Left edge
+        points.push({ y: -halfWidth, z: -halfHeight + edgeT * (2 * halfHeight) });
+        break;
+    }
+  }
+
+  // Trim to exact resolution if we went over
+  return points.slice(0, resolution);
 }
 
 /**

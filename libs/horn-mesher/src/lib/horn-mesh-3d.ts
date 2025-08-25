@@ -713,46 +713,85 @@ function generateMountEdgeConnection(
         });
       }
     } else if (mode === "rectangular") {
-      // Generate rectangular points using the same logic as generateRectanglePoints
-      // This ensures proper alignment with the actual horn cross-sections
-      const pointsPerSide = Math.floor(circumferenceSteps / 4);
-      const remainingPoints = circumferenceSteps - pointsPerSide * 4;
+      // Use the same edge-based rectangular generation logic as cross-section.ts
+      // to ensure sharp 90-degree corners
+      const minPointsPerEdge = Math.max(1, Math.floor(circumferenceSteps / 4));
+      const remainingPoints = circumferenceSteps - minPointsPerEdge * 4;
 
-      // Bottom edge
-      for (let i = 0; i < pointsPerSide; i++) {
-        const t = i / pointsPerSide;
-        points.push({
-          y: -width + t * 2 * width,
-          z: -height,
-        });
-      }
+      // Distribute remaining points proportionally to edge length
+      const perimeter = 2 * (width + height);
+      const topBottomLength = 2 * width;
+      const leftRightLength = 2 * height;
 
-      // Right edge
-      for (let i = 0; i < pointsPerSide; i++) {
-        const t = i / pointsPerSide;
-        points.push({
-          y: width,
-          z: -height + t * 2 * height,
-        });
-      }
+      const topBottomExtra = Math.round((remainingPoints * topBottomLength) / perimeter / 2);
+      const leftRightExtra = Math.round((remainingPoints * leftRightLength) / perimeter / 2);
 
-      // Top edge
-      for (let i = 0; i < pointsPerSide; i++) {
-        const t = i / pointsPerSide;
+      const topPoints = minPointsPerEdge + topBottomExtra;
+      const rightPoints = minPointsPerEdge + leftRightExtra;
+      const bottomPoints = minPointsPerEdge + topBottomExtra;
+      const leftPoints = circumferenceSteps - topPoints - rightPoints - bottomPoints;
+
+      // Generate points starting from top edge (positive Z), going clockwise
+      // Top edge: from left to right
+      for (let i = 0; i < topPoints; i++) {
+        const t = i / Math.max(1, topPoints - 1); // 0 to 1, but handle single point case
         points.push({
-          y: width - t * 2 * width,
+          y: -width + t * (2 * width), // -width to +width
           z: height,
         });
       }
 
-      // Left edge (with remaining points)
-      for (let i = 0; i < pointsPerSide + remainingPoints; i++) {
-        const t = i / (pointsPerSide + remainingPoints);
+      // Right edge: from top to bottom (excluding top corner to avoid duplicate)
+      for (let i = 1; i < rightPoints; i++) {
+        const t = i / Math.max(1, rightPoints - 1);
         points.push({
-          y: -width,
-          z: height - t * 2 * height,
+          y: width,
+          z: height - t * (2 * height), // +height to -height
         });
       }
+
+      // Bottom edge: from right to left (excluding right corner)
+      for (let i = 1; i < bottomPoints; i++) {
+        const t = i / Math.max(1, bottomPoints - 1);
+        points.push({
+          y: width - t * (2 * width), // +width to -width
+          z: -height,
+        });
+      }
+
+      // Left edge: from bottom to top (excluding bottom corner)
+      for (let i = 1; i < leftPoints; i++) {
+        const t = i / Math.max(1, leftPoints - 1);
+        points.push({
+          y: -width,
+          z: -height + t * (2 * height), // -height to +height
+        });
+      }
+
+      // Ensure we have exactly the requested number of points
+      while (points.length < circumferenceSteps) {
+        // Add extra points on the longest edge
+        const edge = Math.floor(points.length / 4) % 4;
+        const edgeT = (points.length % 4) / 4;
+
+        switch (edge) {
+          case 0: // Top edge
+            points.push({ y: -width + edgeT * (2 * width), z: height });
+            break;
+          case 1: // Right edge
+            points.push({ y: width, z: height - edgeT * (2 * height) });
+            break;
+          case 2: // Bottom edge
+            points.push({ y: width - edgeT * (2 * width), z: -height });
+            break;
+          case 3: // Left edge
+            points.push({ y: -width, z: -height + edgeT * (2 * height) });
+            break;
+        }
+      }
+
+      // Trim to exact resolution if we went over
+      return points.slice(0, circumferenceSteps);
     }
 
     return points;

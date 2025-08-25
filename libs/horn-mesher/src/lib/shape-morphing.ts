@@ -154,6 +154,7 @@ function interpolateRadiusAtAngle(
 
 /**
  * Detect if a point set represents a rectangular shape by checking for sharp corners
+ * and edge-aligned points
  */
 function isRectangularShape(points: Point2D[]): boolean {
   if (points.length < 4) return false;
@@ -161,6 +162,7 @@ function isRectangularShape(points: Point2D[]): boolean {
   // Check if points form approximate rectangle by looking for 4 dominant directions
   const corners: Point2D[] = [];
   const tolerance = 1e-6;
+  const angleTolerance = 0.05; // ~3 degrees tolerance for perpendicularity
 
   for (let i = 0; i < points.length; i++) {
     const prev = points[(i - 1 + points.length) % points.length];
@@ -183,15 +185,38 @@ function isRectangularShape(points: Point2D[]): boolean {
 
       // Check if vectors are perpendicular (dot product near 0)
       const dot = dir1.y * dir2.y + dir1.z * dir2.z;
-      if (Math.abs(dot) < 0.1) {
-        // Allow some tolerance for numerical errors
+      if (Math.abs(dot) < angleTolerance) {
         corners.push(curr);
       }
     }
   }
 
   // A rectangle should have exactly 4 corners
-  return corners.length === 4;
+  if (corners.length !== 4) return false;
+
+  // Additional check: verify points are aligned with rectangle edges
+  // Find the bounding box and check if most points lie on the edges
+  const minY = Math.min(...points.map((p) => p.y));
+  const maxY = Math.max(...points.map((p) => p.y));
+  const minZ = Math.min(...points.map((p) => p.z));
+  const maxZ = Math.max(...points.map((p) => p.z));
+
+  const edgeTolerance = Math.min(maxY - minY, maxZ - minZ) * 0.01; // 1% of smaller dimension
+
+  let edgePoints = 0;
+  for (const point of points) {
+    const onLeftEdge = Math.abs(point.y - minY) < edgeTolerance;
+    const onRightEdge = Math.abs(point.y - maxY) < edgeTolerance;
+    const onTopEdge = Math.abs(point.z - maxZ) < edgeTolerance;
+    const onBottomEdge = Math.abs(point.z - minZ) < edgeTolerance;
+
+    if (onLeftEdge || onRightEdge || onTopEdge || onBottomEdge) {
+      edgePoints++;
+    }
+  }
+
+  // At least 80% of points should be on edges for a true rectangle
+  return edgePoints >= Math.floor(points.length * 0.8);
 }
 
 /**
@@ -200,7 +225,7 @@ function isRectangularShape(points: Point2D[]): boolean {
 function normalizeRectangularPointSet(points: Point2D[], targetResolution: number): Point2D[] {
   // Find the 4 corner points by detecting sharp angle changes
   const corners: { point: Point2D; index: number }[] = [];
-  const tolerance = 0.1; // Tolerance for perpendicular check
+  const tolerance = 0.01; // Tight tolerance for sharp 90-degree corners
 
   for (let i = 0; i < points.length; i++) {
     const prev = points[(i - 1 + points.length) % points.length];
