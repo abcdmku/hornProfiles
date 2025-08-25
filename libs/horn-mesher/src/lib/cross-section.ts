@@ -102,20 +102,21 @@ function generateRectanglePoints(
   }
 
   // Distribute interior points proportionally to edge length
+  // Use floor instead of round to avoid over-allocation
   const pointsPerEdge = edgeLengths.map((len) =>
-    Math.round((interiorPoints * len) / totalPerimeter),
+    Math.floor((interiorPoints * len) / totalPerimeter),
   );
 
-  // Adjust for rounding errors
+  // Adjust for rounding errors by distributing remaining points
   const totalAllocated = pointsPerEdge.reduce((sum, n) => sum + n, 0);
-  if (totalAllocated < interiorPoints) {
-    // Add remaining points to longest edge
-    const maxIdx = edgeLengths.indexOf(Math.max(...edgeLengths));
-    pointsPerEdge[maxIdx] += interiorPoints - totalAllocated;
-  } else if (totalAllocated > interiorPoints) {
-    // Remove extra points from longest edge
-    const maxIdx = edgeLengths.indexOf(Math.max(...edgeLengths));
-    pointsPerEdge[maxIdx] -= totalAllocated - interiorPoints;
+  let remaining = interiorPoints - totalAllocated;
+
+  // Distribute remaining points one at a time to edges, cycling through them
+  let edgeIndex = 0;
+  while (remaining > 0) {
+    pointsPerEdge[edgeIndex]++;
+    remaining--;
+    edgeIndex = (edgeIndex + 1) % 4;
   }
 
   // Generate points starting from top center to match ellipse
@@ -123,27 +124,39 @@ function generateRectanglePoints(
   const result: Point2D[] = [];
 
   // Start from middle of top edge
-  // Top edge interior points (from center to right)
+  // Top edge interior points
   const topEdgePoints = pointsPerEdge[3];
 
-  // If odd number of points, add the center point first
-  if (topEdgePoints % 2 === 1) {
-    const centerIdx = Math.floor(topEdgePoints / 2);
-    const t = (centerIdx + 1) / (topEdgePoints + 1);
-    result.push({
+  // For the top edge, we want to start from the center
+  // Generate all top edge points in an array first
+  const topEdgeInteriorPoints: Point2D[] = [];
+  for (let i = 0; i < topEdgePoints; i++) {
+    const t = (i + 1) / (topEdgePoints + 1);
+    topEdgeInteriorPoints.push({
       y: -halfWidth + t * 2 * halfWidth,
       z: halfHeight,
     });
   }
 
-  // Add points from center to right
-  const startIdx = Math.ceil(topEdgePoints / 2);
-  for (let i = startIdx; i < topEdgePoints; i++) {
-    const t = (i + 1) / (topEdgePoints + 1);
-    result.push({
-      y: -halfWidth + t * 2 * halfWidth,
-      z: halfHeight,
-    });
+  // Now add them starting from the middle
+  if (topEdgePoints === 1) {
+    // Single point - just add it (it's already centered)
+    result.push(topEdgeInteriorPoints[0]);
+  } else if (topEdgePoints % 2 === 0) {
+    // Even number - add from middle outward
+    const mid = topEdgePoints / 2;
+    // Add right half
+    for (let i = mid; i < topEdgePoints; i++) {
+      result.push(topEdgeInteriorPoints[i]);
+    }
+  } else {
+    // Odd number - add center, then right half
+    const mid = Math.floor(topEdgePoints / 2);
+    result.push(topEdgeInteriorPoints[mid]); // Center point
+    // Add right half
+    for (let i = mid + 1; i < topEdgePoints; i++) {
+      result.push(topEdgeInteriorPoints[i]);
+    }
   }
 
   // Top-right corner
@@ -186,14 +199,22 @@ function generateRectanglePoints(
   result.push(corners[3]);
 
   // Top edge interior points (from left to center)
-  const endIdx = Math.floor(topEdgePoints / 2);
-  for (let i = 0; i < endIdx; i++) {
-    const t = (i + 1) / (topEdgePoints + 1);
-    result.push({
-      y: -halfWidth + t * 2 * halfWidth,
-      z: halfHeight,
-    });
+  if (topEdgePoints > 1) {
+    if (topEdgePoints % 2 === 0) {
+      // Even number - add left half
+      const mid = topEdgePoints / 2;
+      for (let i = 0; i < mid; i++) {
+        result.push(topEdgeInteriorPoints[i]);
+      }
+    } else {
+      // Odd number - add left half (excluding center which was already added)
+      const mid = Math.floor(topEdgePoints / 2);
+      for (let i = 0; i < mid; i++) {
+        result.push(topEdgeInteriorPoints[i]);
+      }
+    }
   }
+  // If topEdgePoints === 1, we already added it at the beginning, so nothing to do here
 
   // Ensure we have exactly the right number of points
   while (result.length > resolution) {
