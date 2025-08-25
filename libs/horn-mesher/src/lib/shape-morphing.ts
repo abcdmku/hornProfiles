@@ -60,13 +60,22 @@ export function morphCrossSectionShapes(params: ShapeMorphParams): Point2D[] {
 
 /**
  * Normalize point set to specific resolution with even angular distribution
+ * Preserves sharp corners for rectangular shapes
  */
 function normalizePointSet(points: Point2D[], targetResolution: number): Point2D[] {
   if (points.length === targetResolution) {
     return points; // Already correct resolution
   }
 
-  // Convert to polar coordinates
+  // Check if this is a rectangular shape by detecting sharp corners
+  const isRectangular = isRectangularShape(points);
+
+  if (isRectangular) {
+    // For rectangular shapes, preserve the exact corner positions
+    return normalizeRectangularPointSet(points, targetResolution);
+  }
+
+  // Convert to polar coordinates for smooth shapes
   const polarPoints = points.map((p) => ({
     angle: Math.atan2(p.z, p.y),
     radius: Math.sqrt(p.y * p.y + p.z * p.z),
@@ -141,6 +150,134 @@ function interpolateRadiusAtAngle(
   }
 
   return polarPoints[closestIndex].radius;
+}
+
+/**
+ * Detect if a point set represents a rectangular shape by checking for sharp corners
+ */
+function isRectangularShape(points: Point2D[]): boolean {
+  if (points.length < 4) return false;
+
+  // Check if points form approximate rectangle by looking for 4 dominant directions
+  const corners: Point2D[] = [];
+  const tolerance = 1e-6;
+
+  for (let i = 0; i < points.length; i++) {
+    const prev = points[(i - 1 + points.length) % points.length];
+    const curr = points[i];
+    const next = points[(i + 1) % points.length];
+
+    // Calculate direction vectors
+    const dir1 = { y: curr.y - prev.y, z: curr.z - prev.z };
+    const dir2 = { y: next.y - curr.y, z: next.z - curr.z };
+
+    // Normalize vectors
+    const len1 = Math.sqrt(dir1.y * dir1.y + dir1.z * dir1.z);
+    const len2 = Math.sqrt(dir2.y * dir2.y + dir2.z * dir2.z);
+
+    if (len1 > tolerance && len2 > tolerance) {
+      dir1.y /= len1;
+      dir1.z /= len1;
+      dir2.y /= len2;
+      dir2.z /= len2;
+
+      // Check if vectors are perpendicular (dot product near 0)
+      const dot = dir1.y * dir2.y + dir1.z * dir2.z;
+      if (Math.abs(dot) < 0.1) {
+        // Allow some tolerance for numerical errors
+        corners.push(curr);
+      }
+    }
+  }
+
+  // A rectangle should have exactly 4 corners
+  return corners.length === 4;
+}
+
+/**
+ * Normalize rectangular point set while preserving sharp corners
+ */
+function normalizeRectangularPointSet(points: Point2D[], targetResolution: number): Point2D[] {
+  // Find the 4 corner points by detecting sharp angle changes
+  const corners: { point: Point2D; index: number }[] = [];
+  const tolerance = 0.1; // Tolerance for perpendicular check
+
+  for (let i = 0; i < points.length; i++) {
+    const prev = points[(i - 1 + points.length) % points.length];
+    const curr = points[i];
+    const next = points[(i + 1) % points.length];
+
+    // Calculate direction vectors
+    const dir1 = { y: curr.y - prev.y, z: curr.z - prev.z };
+    const dir2 = { y: next.y - curr.y, z: next.z - curr.z };
+
+    // Normalize vectors
+    const len1 = Math.sqrt(dir1.y * dir1.y + dir1.z * dir1.z);
+    const len2 = Math.sqrt(dir2.y * dir2.y + dir2.z * dir2.z);
+
+    if (len1 > 1e-6 && len2 > 1e-6) {
+      dir1.y /= len1;
+      dir1.z /= len1;
+      dir2.y /= len2;
+      dir2.z /= len2;
+
+      // Check if vectors are approximately perpendicular
+      const dot = dir1.y * dir2.y + dir1.z * dir2.z;
+      if (Math.abs(dot) < tolerance) {
+        corners.push({ point: curr, index: i });
+      }
+    }
+  }
+
+  // If we don't have exactly 4 corners, fall back to regular normalization
+  if (corners.length !== 4) {
+    const polarPoints = points.map((p) => ({
+      angle: Math.atan2(p.z, p.y),
+      radius: Math.sqrt(p.y * p.y + p.z * p.z),
+    }));
+    polarPoints.sort((a, b) => a.angle - b.angle);
+
+    const normalized: Point2D[] = [];
+    for (let i = 0; i < targetResolution; i++) {
+      const targetAngle = (2 * Math.PI * i) / targetResolution + Math.PI / 2;
+      const radius = interpolateRadiusAtAngle(polarPoints, targetAngle);
+      normalized.push({
+        y: radius * Math.cos(targetAngle),
+        z: radius * Math.sin(targetAngle),
+      });
+    }
+    return normalized;
+  }
+
+  // Sort corners by angle to ensure proper order
+  corners.sort((a, b) => {
+    const angleA = Math.atan2(a.point.z, a.point.y);
+    const angleB = Math.atan2(b.point.z, b.point.y);
+    return angleA - angleB;
+  });
+
+  // Distribute points along the rectangle edges
+  const normalized: Point2D[] = [];
+  const pointsPerEdge = Math.floor(targetResolution / 4);
+  const remainder = targetResolution % 4;
+
+  for (let edge = 0; edge < 4; edge++) {
+    const startCorner = corners[edge].point;
+    const endCorner = corners[(edge + 1) % 4].point;
+    const edgePoints = pointsPerEdge + (edge < remainder ? 1 : 0);
+
+    // Add points along this edge (excluding the end corner to avoid duplicates)
+    for (let i = 0; i < edgePoints; i++) {
+      const t = i / edgePoints;
+      const point = {
+        y: startCorner.y + t * (endCorner.y - startCorner.y),
+        z: startCorner.z + t * (endCorner.z - startCorner.z),
+      };
+      normalized.push(point);
+    }
+  }
+
+  return normalized;
 }
 
 /**

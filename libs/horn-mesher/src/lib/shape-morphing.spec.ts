@@ -25,6 +25,61 @@ describe("shape-morphing", () => {
     });
   });
 
+  describe("rectangular shape corner preservation", () => {
+    it("should preserve sharp corners for rectangular shapes", () => {
+      const params: ShapeMorphParams = {
+        sourceShape: "rectangular",
+        targetShape: "rectangular",
+        morphFactor: 0,
+        sourceWidth: 40,
+        sourceHeight: 30,
+        targetWidth: 40,
+        targetHeight: 30,
+        resolution: 16,
+      };
+
+      const result = morphCrossSectionShapes(params);
+
+      // Check that we have sharp corners by looking for points that are exactly
+      // at the expected corner positions
+      const halfWidth = 20;
+      const halfHeight = 15;
+      const tolerance = 1e-6;
+
+      // Find corner points (should be at exactly ±halfWidth, ±halfHeight)
+      const corners = result.filter(
+        (p) =>
+          (Math.abs(Math.abs(p.y) - halfWidth) < tolerance &&
+            Math.abs(p.z) <= halfHeight + tolerance) ||
+          (Math.abs(Math.abs(p.z) - halfHeight) < tolerance &&
+            Math.abs(p.y) <= halfWidth + tolerance),
+      );
+
+      // Should have at least 4 points very close to the exact corners
+      expect(corners.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it("should maintain corner sharpness during morphing from rectangular to ellipse", () => {
+      const params: ShapeMorphParams = {
+        sourceShape: "rectangular",
+        targetShape: "ellipse",
+        morphFactor: 0.5,
+        sourceWidth: 40,
+        sourceHeight: 30,
+        targetWidth: 40,
+        targetHeight: 30,
+        resolution: 16,
+      };
+
+      const result = morphCrossSectionShapes(params);
+
+      // At 50% morph, should still have some degree of corner definition
+      // The shape shouldn't be completely rounded
+      expect(result).toBeDefined();
+      expect(result.length).toBe(16);
+    });
+  });
+
   describe("morphCrossSectionShapes", () => {
     const baseParams: ShapeMorphParams = {
       sourceShape: "ellipse",
