@@ -11,7 +11,6 @@ export interface MeshGenerationOptions {
   resolution: number;
   elementSize: number;
   curvatureRefine?: boolean;
-  thickness?: number; // Wall thickness in mm
 }
 
 export function generateHornMesh2D(profile: ProfileXY, options: MeshGenerationOptions): MeshData {
@@ -73,78 +72,63 @@ export function generateHornMesh3D(
     !widthProfile &&
     !heightProfile &&
     !geometry.driverMount?.enabled &&
-    !geometry.hornMount?.enabled &&
-    !options.thickness;
+    !geometry.hornMount?.enabled;
   if (isSimpleCircular) {
     return generateHornMesh2D(profile, options);
   }
 
-  const { resolution = 50, thickness = 0 } = options;
+  const { resolution = 50 } = options;
   const meshes: MeshData[] = [];
 
-  // Generate horn body with optional thickness
-  let hornMesh: MeshData;
+  // Generate horn body
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
 
-  if (thickness > 0) {
-    hornMesh = generateHornMeshWithThickness(geometry, resolution, thickness);
-  } else {
-    // Original single-surface mesh generation
-    const vertices: number[] = [];
-    const indices: number[] = [];
-    const normals: number[] = [];
+  const circumferenceSteps = resolution;
+  const profileSteps = profile.length;
 
-    const circumferenceSteps = resolution;
-    const profileSteps = profile.length;
+  for (let i = 0; i < profileSteps; i++) {
+    const point = profile[i];
+    const x = point.x;
+    const baseRadius = point.y;
 
-    for (let i = 0; i < profileSteps; i++) {
-      const point = profile[i];
-      const x = point.x;
-      const baseRadius = point.y;
+    // Use profile-specific dimensions if available
+    const width = widthProfile ? widthProfile[i].y * 2 : geometry.width;
+    const height = heightProfile ? heightProfile[i].y * 2 : geometry.height;
 
-      // Use profile-specific dimensions if available
-      const width = widthProfile ? widthProfile[i].y * 2 : geometry.width;
-      const height = heightProfile ? heightProfile[i].y * 2 : geometry.height;
+    const crossSection = generateCrossSection(mode, baseRadius, width, height, circumferenceSteps);
 
-      const crossSection = generateCrossSection(
-        mode,
-        baseRadius,
-        width,
-        height,
-        circumferenceSteps,
-      );
-
-      for (const csPoint of crossSection) {
-        vertices.push(x, csPoint.y, csPoint.z);
-        const len = Math.sqrt(csPoint.y * csPoint.y + csPoint.z * csPoint.z);
-        normals.push(0, csPoint.y / len, csPoint.z / len);
-      }
+    for (const csPoint of crossSection) {
+      vertices.push(x, csPoint.y, csPoint.z);
+      const len = Math.sqrt(csPoint.y * csPoint.y + csPoint.z * csPoint.z);
+      normals.push(0, csPoint.y / len, csPoint.z / len);
     }
-
-    for (let i = 0; i < profileSteps - 1; i++) {
-      for (let j = 0; j < circumferenceSteps; j++) {
-        const a = i * circumferenceSteps + j;
-        const b = i * circumferenceSteps + ((j + 1) % circumferenceSteps);
-        const c = (i + 1) * circumferenceSteps + j;
-        const d = (i + 1) * circumferenceSteps + ((j + 1) % circumferenceSteps);
-
-        indices.push(a, c, b);
-        indices.push(b, c, d);
-      }
-    }
-
-    hornMesh = {
-      vertices: new Float32Array(vertices),
-      indices: new Uint32Array(indices),
-      normals: new Float32Array(normals),
-    };
   }
+
+  for (let i = 0; i < profileSteps - 1; i++) {
+    for (let j = 0; j < circumferenceSteps; j++) {
+      const a = i * circumferenceSteps + j;
+      const b = i * circumferenceSteps + ((j + 1) % circumferenceSteps);
+      const c = (i + 1) * circumferenceSteps + j;
+      const d = (i + 1) * circumferenceSteps + ((j + 1) % circumferenceSteps);
+
+      indices.push(a, c, b);
+      indices.push(b, c, d);
+    }
+  }
+
+  const hornMesh: MeshData = {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+    normals: new Float32Array(normals),
+  };
 
   meshes.push(hornMesh);
 
   // Generate driver mount if enabled
   if (geometry.driverMount?.enabled) {
-    // Position mount at throat
-    const throatPosition = profile[0].x;
+    const throatPosition = profile[0].x; // Throat is at the first profile point
 
     // Get the actual throat shape (first cross-section)
     const throatWidth = widthProfile ? widthProfile[0].y * 2 : geometry.width || profile[0].y * 2;
@@ -159,15 +143,13 @@ export function generateHornMesh3D(
       mode,
       geometry.driverMount,
       resolution,
-      thickness,
     );
     meshes.push(driverMountMesh);
   }
 
   // Generate horn mount if enabled
   if (geometry.hornMount?.enabled) {
-    // Position mount at mouth
-    const mouthPosition = profile[profile.length - 1].x;
+    const mouthPosition = profile[profile.length - 1].x; // Mouth is at the last profile point
     const mouthWidth = geometry.width || profile[profile.length - 1].y * 2;
     const mouthHeight = geometry.height || profile[profile.length - 1].y * 2;
 
@@ -178,7 +160,6 @@ export function generateHornMesh3D(
       mode,
       geometry.hornMount,
       resolution,
-      thickness,
     );
     meshes.push(hornMountMesh);
   }
@@ -189,169 +170,6 @@ export function generateHornMesh3D(
   }
 
   return hornMesh;
-}
-
-function generateHornMeshWithThickness(
-  geometry: HornGeometry,
-  resolution: number,
-  thickness: number,
-): MeshData {
-  const { mode, profile, widthProfile, heightProfile } = geometry;
-  const vertices: number[] = [];
-  const indices: number[] = [];
-  const normals: number[] = [];
-
-  const circumferenceSteps = resolution;
-  const profileSteps = profile.length;
-
-  // Calculate profile normals (perpendicular to the surface)
-  const profileNormals: Array<{ x: number; y: number }> = [];
-  for (let i = 0; i < profileSteps; i++) {
-    let dx: number, dy: number;
-
-    if (i === 0) {
-      // First point: use forward difference
-      dx = profile[1].x - profile[0].x;
-      dy = profile[1].y - profile[0].y;
-    } else if (i === profileSteps - 1) {
-      // Last point: use backward difference
-      dx = profile[i].x - profile[i - 1].x;
-      dy = profile[i].y - profile[i - 1].y;
-    } else {
-      // Middle points: use central difference
-      dx = profile[i + 1].x - profile[i - 1].x;
-      dy = profile[i + 1].y - profile[i - 1].y;
-    }
-
-    // Normalize the tangent vector
-    const len = Math.sqrt(dx * dx + dy * dy);
-    dx /= len;
-    dy /= len;
-
-    // Perpendicular normal (rotate tangent 90 degrees)
-    // For the outer surface, we want the normal pointing outward
-    const nx = -dy; // Perpendicular in 2D (inverted for correct direction)
-    const ny = dx; // Points outward when y is radius
-
-    profileNormals.push({ x: nx, y: ny });
-  }
-
-  // Generate outer surface vertices
-  for (let i = 0; i < profileSteps; i++) {
-    const point = profile[i];
-    const normal = profileNormals[i];
-
-    // Apply thickness perpendicular to the surface
-    const x = point.x + normal.x * thickness;
-    const baseRadius = Math.max(0.1, point.y + normal.y * thickness); // Ensure positive radius
-
-    // Use profile-specific dimensions if available
-    const width = widthProfile ? widthProfile[i].y * 2 : geometry.width;
-    const height = heightProfile ? heightProfile[i].y * 2 : geometry.height;
-
-    // Generate outer cross-section with adjusted radius
-    const outerCrossSection = generateCrossSection(
-      mode,
-      baseRadius,
-      width ? width + normal.y * thickness * 2 : undefined,
-      height ? height + normal.y * thickness * 2 : undefined,
-      circumferenceSteps,
-    );
-
-    for (const csPoint of outerCrossSection) {
-      vertices.push(x, csPoint.y, csPoint.z);
-      const len = Math.sqrt(csPoint.y * csPoint.y + csPoint.z * csPoint.z);
-      normals.push(0, csPoint.y / len, csPoint.z / len);
-    }
-  }
-
-  // Generate inner surface vertices (original profile, no offset)
-  const innerVertexOffset = profileSteps * circumferenceSteps;
-  for (let i = 0; i < profileSteps; i++) {
-    const point = profile[i];
-    const x = point.x;
-    const baseRadius = point.y;
-
-    // Use profile-specific dimensions if available
-    const width = widthProfile ? widthProfile[i].y * 2 : geometry.width;
-    const height = heightProfile ? heightProfile[i].y * 2 : geometry.height;
-
-    // Generate inner cross-section (original size)
-    const innerCrossSection = generateCrossSection(
-      mode,
-      baseRadius,
-      width,
-      height,
-      circumferenceSteps,
-    );
-
-    for (const csPoint of innerCrossSection) {
-      vertices.push(x, csPoint.y, csPoint.z);
-      const len = Math.sqrt(csPoint.y * csPoint.y + csPoint.z * csPoint.z);
-      // Inner surface normals point inward (negative)
-      normals.push(0, -csPoint.y / len, -csPoint.z / len);
-    }
-  }
-
-  // Generate outer surface triangles
-  for (let i = 0; i < profileSteps - 1; i++) {
-    for (let j = 0; j < circumferenceSteps; j++) {
-      const a = i * circumferenceSteps + j;
-      const b = i * circumferenceSteps + ((j + 1) % circumferenceSteps);
-      const c = (i + 1) * circumferenceSteps + j;
-      const d = (i + 1) * circumferenceSteps + ((j + 1) % circumferenceSteps);
-
-      // Outer surface (facing outward)
-      indices.push(a, c, b);
-      indices.push(b, c, d);
-    }
-  }
-
-  // Generate inner surface triangles
-  for (let i = 0; i < profileSteps - 1; i++) {
-    for (let j = 0; j < circumferenceSteps; j++) {
-      const a = innerVertexOffset + i * circumferenceSteps + j;
-      const b = innerVertexOffset + i * circumferenceSteps + ((j + 1) % circumferenceSteps);
-      const c = innerVertexOffset + (i + 1) * circumferenceSteps + j;
-      const d = innerVertexOffset + (i + 1) * circumferenceSteps + ((j + 1) % circumferenceSteps);
-
-      // Inner surface (facing inward, reverse winding)
-      indices.push(a, b, c);
-      indices.push(b, d, c);
-    }
-  }
-
-  // Generate throat cap (connect inner and outer at throat)
-  for (let j = 0; j < circumferenceSteps; j++) {
-    const outerA = j;
-    const outerB = (j + 1) % circumferenceSteps;
-    const innerA = innerVertexOffset + j;
-    const innerB = innerVertexOffset + ((j + 1) % circumferenceSteps);
-
-    // Create quad connecting inner and outer
-    indices.push(innerA, outerA, innerB);
-    indices.push(innerB, outerA, outerB);
-  }
-
-  // Generate mouth cap (connect inner and outer at mouth)
-  const mouthIndex = profileSteps - 1;
-  for (let j = 0; j < circumferenceSteps; j++) {
-    const outerA = mouthIndex * circumferenceSteps + j;
-    const outerB = mouthIndex * circumferenceSteps + ((j + 1) % circumferenceSteps);
-    const innerA = innerVertexOffset + mouthIndex * circumferenceSteps + j;
-    const innerB =
-      innerVertexOffset + mouthIndex * circumferenceSteps + ((j + 1) % circumferenceSteps);
-
-    // Create quad connecting inner and outer (reverse winding for mouth)
-    indices.push(outerA, innerA, outerB);
-    indices.push(outerB, innerA, innerB);
-  }
-
-  return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint32Array(indices),
-    normals: new Float32Array(normals),
-  };
 }
 
 function generateCrossSection(

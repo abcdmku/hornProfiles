@@ -7,155 +7,6 @@ import type {
 import * as poly2tri from "poly2tri";
 
 /**
- * Edge structure for boundary detection
- */
-interface Edge {
-  v1: number;
-  v2: number;
-  count: number;
-}
-
-/**
- * Find boundary edges in a triangulated mesh
- */
-function findBoundaryEdges(indices: number[]): Edge[] {
-  const edgeMap = new Map<string, Edge>();
-
-  // Process all triangles
-  for (let i = 0; i < indices.length; i += 3) {
-    const v0 = indices[i];
-    const v1 = indices[i + 1];
-    const v2 = indices[i + 2];
-
-    // Process three edges of the triangle
-    const edges = [
-      [v0, v1],
-      [v1, v2],
-      [v2, v0],
-    ];
-
-    for (const [a, b] of edges) {
-      // Create a consistent edge key (smaller vertex first)
-      const key = a < b ? `${a}-${b}` : `${b}-${a}`;
-
-      const edge = edgeMap.get(key);
-      if (edge) {
-        edge.count++;
-      } else {
-        edgeMap.set(key, { v1: a, v2: b, count: 1 });
-      }
-    }
-  }
-
-  // Boundary edges appear exactly once (not shared by two triangles)
-  const boundaryEdges: Edge[] = [];
-  for (const edge of edgeMap.values()) {
-    if (edge.count === 1) {
-      boundaryEdges.push(edge);
-    }
-  }
-
-  return boundaryEdges;
-}
-
-/**
- * Extrude a 2D mount mesh to create thickness
- */
-function extrudeMountMesh(
-  baseMesh: { vertices: number[]; indices: number[]; normals: number[] },
-  thickness: number,
-  direction: 1 | -1, // 1 for horn mount (forward), -1 for driver mount (backward)
-): MeshData {
-  if (thickness <= 0) {
-    // No thickness, return original mesh
-    return {
-      vertices: new Float32Array(baseMesh.vertices),
-      indices: new Uint32Array(baseMesh.indices),
-      normals: new Float32Array(baseMesh.normals),
-    };
-  }
-
-  const vertices: number[] = [];
-  const indices: number[] = [];
-  const normals: number[] = [];
-  const numVertices = baseMesh.vertices.length / 3;
-
-  // Step 1: Front face vertices (original position)
-  for (let i = 0; i < baseMesh.vertices.length; i += 3) {
-    vertices.push(
-      baseMesh.vertices[i], // x
-      baseMesh.vertices[i + 1], // y
-      baseMesh.vertices[i + 2], // z
-    );
-    normals.push(
-      direction, // x normal (pointing away from horn for driver, toward horn for horn mount)
-      0, // y normal
-      0, // z normal
-    );
-  }
-
-  // Step 2: Back face vertices (offset by thickness)
-  for (let i = 0; i < baseMesh.vertices.length; i += 3) {
-    vertices.push(
-      baseMesh.vertices[i] + thickness * direction, // x offset
-      baseMesh.vertices[i + 1], // y same
-      baseMesh.vertices[i + 2], // z same
-    );
-    normals.push(
-      -direction, // x normal (opposite direction)
-      0, // y normal
-      0, // z normal
-    );
-  }
-
-  // Step 3: Front face indices (original winding)
-  for (let i = 0; i < baseMesh.indices.length; i += 3) {
-    indices.push(baseMesh.indices[i], baseMesh.indices[i + 1], baseMesh.indices[i + 2]);
-  }
-
-  // Step 4: Back face indices (reversed winding)
-  for (let i = 0; i < baseMesh.indices.length; i += 3) {
-    indices.push(
-      numVertices + baseMesh.indices[i],
-      numVertices + baseMesh.indices[i + 2], // Swap for reverse winding
-      numVertices + baseMesh.indices[i + 1],
-    );
-  }
-
-  // Step 5: Generate side walls by finding boundary edges
-  const boundaryEdges = findBoundaryEdges(baseMesh.indices);
-
-  for (const edge of boundaryEdges) {
-    const v1Front = edge.v1;
-    const v2Front = edge.v2;
-    const v1Back = numVertices + edge.v1;
-    const v2Back = numVertices + edge.v2;
-
-    // Create quad (two triangles) connecting the edge
-    // Consider winding order based on direction
-    if (direction > 0) {
-      // Horn mount (forward extrusion)
-      indices.push(v1Front, v2Front, v1Back);
-      indices.push(v1Back, v2Front, v2Back);
-    } else {
-      // Driver mount (backward extrusion)
-      indices.push(v1Front, v1Back, v2Front);
-      indices.push(v2Front, v1Back, v2Back);
-    }
-
-    // Note: For proper normals on side walls, we would need to create separate
-    // vertices with their own normals. Currently reusing existing vertices
-    // which means normals are averaged between faces.
-  }
-
-  return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint32Array(indices),
-    normals: new Float32Array(normals),
-  };
-}
-
-/**
  * Remove duplicate consecutive points from a polygon
  */
 function removeDuplicatePoints(points: poly2tri.Point[]): poly2tri.Point[] {
@@ -194,7 +45,6 @@ export function generateDriverMount(
   throatMode: CrossSectionMode,
   config: DriverMountConfig,
   resolution: number,
-  thickness = 0,
 ): MeshData {
   // Step 1: Generate 2D points for outer boundary (circular flange)
   const outerRadius = config.outerDiameter / 2;
@@ -302,12 +152,6 @@ export function generateDriverMount(
     }
   }
 
-  // Apply thickness if specified
-  if (thickness > 0) {
-    const baseMesh = { vertices, indices, normals };
-    return extrudeMountMesh(baseMesh, thickness, 1); // 1 for driver mount (forward towards horn)
-  }
-
   return {
     vertices: new Float32Array(vertices),
     indices: new Uint32Array(indices),
@@ -325,7 +169,6 @@ export function generateHornMount(
   mouthMode: CrossSectionMode,
   config: HornMountConfig,
   resolution: number,
-  thickness = 0,
 ): MeshData {
   // Step 1: Generate outer boundary (mouth shape + extension)
   const extensionFactor = 1 + config.widthExtension / Math.max(mouthWidth, mouthHeight);
@@ -449,12 +292,6 @@ export function generateHornMount(
         indices.push(index);
       }
     }
-  }
-
-  // Apply thickness if specified
-  if (thickness > 0) {
-    const baseMesh = { vertices, indices, normals };
-    return extrudeMountMesh(baseMesh, thickness, -1); // -1 for horn mount (backward towards horn)
   }
 
   return {
