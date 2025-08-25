@@ -454,15 +454,39 @@ function generateDoubleWalledHornBody(
     }
 
     // Add vertices and normals for inner wall
-    for (const csPoint of crossSection) {
+    for (let j = 0; j < crossSection.length; j++) {
+      const csPoint = crossSection[j];
       vertices.push(x, csPoint.y, csPoint.z);
 
-      // Calculate normal vector (pointing inward for inner surface)
-      const len = Math.sqrt(csPoint.y * csPoint.y + csPoint.z * csPoint.z);
-      if (len > 0) {
-        normals.push(0, -csPoint.y / len, -csPoint.z / len);
+      // Calculate normal vector
+      if (mode === "rectangular") {
+        // For rectangles, use face normals to preserve sharp corners
+        // Determine which face this point belongs to
+        const absY = Math.abs(csPoint.y);
+        const absZ = Math.abs(csPoint.z);
+        const maxDim = Math.max(absY, absZ);
+
+        let ny = 0,
+          nz = 0;
+        if (maxDim === absY) {
+          // Point is on left or right face
+          ny = csPoint.y > 0 ? -1 : 1; // Inward normal
+          nz = 0;
+        } else {
+          // Point is on top or bottom face
+          ny = 0;
+          nz = csPoint.z > 0 ? -1 : 1; // Inward normal
+        }
+
+        normals.push(0, ny, nz);
       } else {
-        normals.push(0, 0, -1);
+        // Original smooth normal calculation for other shapes
+        const len = Math.sqrt(csPoint.y * csPoint.y + csPoint.z * csPoint.z);
+        if (len > 0) {
+          normals.push(0, -csPoint.y / len, -csPoint.z / len);
+        } else {
+          normals.push(0, 0, -1);
+        }
       }
     }
   }
@@ -569,15 +593,39 @@ function generateDoubleWalledHornBody(
     }
 
     // Add vertices and normals for outer wall
-    for (const csPoint of crossSection) {
+    for (let j = 0; j < crossSection.length; j++) {
+      const csPoint = crossSection[j];
       vertices.push(x, csPoint.y, csPoint.z);
 
-      // Calculate normal vector (pointing outward)
-      const len = Math.sqrt(csPoint.y * csPoint.y + csPoint.z * csPoint.z);
-      if (len > 0) {
-        normals.push(0, csPoint.y / len, csPoint.z / len);
+      // Calculate normal vector
+      if (mode === "rectangular") {
+        // For rectangles, use face normals to preserve sharp corners
+        // Determine which face this point belongs to
+        const absY = Math.abs(csPoint.y);
+        const absZ = Math.abs(csPoint.z);
+        const maxDim = Math.max(absY, absZ);
+
+        let ny = 0,
+          nz = 0;
+        if (maxDim === absY) {
+          // Point is on left or right face
+          ny = csPoint.y > 0 ? 1 : -1; // Outward normal
+          nz = 0;
+        } else {
+          // Point is on top or bottom face
+          ny = 0;
+          nz = csPoint.z > 0 ? 1 : -1; // Outward normal
+        }
+
+        normals.push(0, ny, nz);
       } else {
-        normals.push(0, 0, 1);
+        // Original smooth normal calculation for other shapes
+        const len = Math.sqrt(csPoint.y * csPoint.y + csPoint.z * csPoint.z);
+        if (len > 0) {
+          normals.push(0, csPoint.y / len, csPoint.z / len);
+        } else {
+          normals.push(0, 0, 1);
+        }
       }
     }
   }

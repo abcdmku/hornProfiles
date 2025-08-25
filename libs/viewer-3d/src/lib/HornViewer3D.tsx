@@ -31,6 +31,11 @@ function Mesh({
     bufferGeometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
     bufferGeometry.setIndex(new THREE.BufferAttribute(indices, 1));
     bufferGeometry.computeBoundingBox();
+
+    // For better visualization of sharp edges, compute vertex normals
+    // This will help visualize the actual geometry better
+    // bufferGeometry.computeVertexNormals();
+
     return bufferGeometry;
   }, [positions, indices, normals]);
 

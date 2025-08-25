@@ -10,5 +10,14 @@
     "@horn-sim/viewer-3d": "workspace:*",
     "horn-profiles": "workspace:*",
     "viewer-2d": "workspace:*"
-  }
+  },
+  "main": "postcss.config.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }

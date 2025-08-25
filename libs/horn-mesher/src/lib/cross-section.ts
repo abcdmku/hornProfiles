@@ -75,7 +75,8 @@ function generateRectanglePoints(
   // NEW APPROACH: Explicitly place corners and distribute remaining points
   // We need to ensure corners are ALWAYS present regardless of resolution
 
-  // Define the 4 corners (in order starting from top-right, going clockwise)
+  // Define the 4 corners with EXACT positions for sharp edges
+  // Using exact values ensures no floating-point errors
   const corners = [
     { y: halfWidth, z: halfHeight }, // Top-right
     { y: halfWidth, z: -halfHeight }, // Bottom-right
