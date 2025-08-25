@@ -279,19 +279,8 @@ export function App(): React.JSX.Element {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-slate-800 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-float animation-delay-4000"></div>
       </div>
 
-      <div className="relative flex flex-col h-screen">
-        {/* Glass header */}
-        <header className="relative backdrop-blur-lg bg-slate-900/50 border-b border-slate-700/50 px-6 py-4 shadow-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg shadow-lg"></div>
-              <h1 className="text-3xl font-bold text-slate-100">Horn Profile Viewer</h1>
-            </div>
-            <div className="text-sm text-slate-400">Acoustic Engineering Suite</div>
-          </div>
-        </header>
-
-        <div className="flex flex-1 gap-6 p-6 h-[calc(100vh-88px)]">
+      <div className="relative flex h-screen">
+        <div className="flex flex-1 gap-6 p-6">
           {/* Glass sidebar */}
           <div className="w-80 backdrop-blur-lg bg-slate-800/30 rounded-2xl shadow-2xl border border-slate-700/30 flex flex-col h-full">
             <h2 className="text-xl font-semibold p-6 pb-4 text-slate-100 flex items-center flex-shrink-0">
