@@ -57,57 +57,64 @@ function generateRectanglePoints(
 ): Point2D[] {
   const points: Point2D[] = [];
 
-  // Calculate points per edge, ensuring each edge gets at least 1 point
-  const minPointsPerEdge = Math.max(1, Math.floor(resolution / 4));
-  const remainingPoints = resolution - minPointsPerEdge * 4;
+  // For rectangles, we MUST ensure corners are exactly at the corner positions
+  // We'll distribute points per edge but always include exact corners
 
-  // Distribute remaining points proportionally to edge length
-  const perimeter = 2 * (halfWidth + halfHeight);
-  const topBottomLength = 2 * halfWidth;
-  const leftRightLength = 2 * halfHeight;
+  // Calculate base points per edge (excluding corners)
+  const edgePointsBase = Math.max(0, Math.floor((resolution - 4) / 4));
+  const extraPoints = Math.max(0, resolution - 4 - edgePointsBase * 4);
 
-  const topBottomExtra = Math.round((remainingPoints * topBottomLength) / perimeter / 2);
-  const leftRightExtra = Math.round((remainingPoints * leftRightLength) / perimeter / 2);
+  // Distribute extra points to edges
+  const topEdgePoints = edgePointsBase + (extraPoints > 0 ? 1 : 0);
+  const rightEdgePoints = edgePointsBase + (extraPoints > 1 ? 1 : 0);
+  const bottomEdgePoints = edgePointsBase + (extraPoints > 2 ? 1 : 0);
+  const leftEdgePoints = edgePointsBase;
 
-  const topPoints = minPointsPerEdge + topBottomExtra;
-  const rightPoints = minPointsPerEdge + leftRightExtra;
-  const bottomPoints = minPointsPerEdge + topBottomExtra;
-  const leftPoints = resolution - topPoints - rightPoints - bottomPoints;
+  // CRITICAL: Start with exact top-left corner
+  points.push({ y: -halfWidth, z: halfHeight });
 
-  // Generate points starting from top edge (positive Z), going clockwise
-  // Top edge: from left to right
-  for (let i = 0; i < topPoints; i++) {
-    const t = i / Math.max(1, topPoints - 1); // 0 to 1, but handle single point case
+  // Top edge interior points (between top-left and top-right corners)
+  for (let i = 0; i < topEdgePoints; i++) {
+    const t = (i + 1) / (topEdgePoints + 1);
     points.push({
-      y: -halfWidth + t * (2 * halfWidth), // -halfWidth to +halfWidth
+      y: -halfWidth + t * (2 * halfWidth),
       z: halfHeight,
     });
   }
 
-  // Right edge: from top to bottom (excluding top corner to avoid duplicate)
-  for (let i = 1; i < rightPoints; i++) {
-    const t = i / Math.max(1, rightPoints - 1);
+  // CRITICAL: Exact top-right corner
+  points.push({ y: halfWidth, z: halfHeight });
+
+  // Right edge interior points (between top-right and bottom-right corners)
+  for (let i = 0; i < rightEdgePoints; i++) {
+    const t = (i + 1) / (rightEdgePoints + 1);
     points.push({
       y: halfWidth,
-      z: halfHeight - t * (2 * halfHeight), // +halfHeight to -halfHeight
+      z: halfHeight - t * (2 * halfHeight),
     });
   }
 
-  // Bottom edge: from right to left (excluding right corner)
-  for (let i = 1; i < bottomPoints; i++) {
-    const t = i / Math.max(1, bottomPoints - 1);
+  // CRITICAL: Exact bottom-right corner
+  points.push({ y: halfWidth, z: -halfHeight });
+
+  // Bottom edge interior points (between bottom-right and bottom-left corners)
+  for (let i = 0; i < bottomEdgePoints; i++) {
+    const t = (i + 1) / (bottomEdgePoints + 1);
     points.push({
-      y: halfWidth - t * (2 * halfWidth), // +halfWidth to -halfWidth
+      y: halfWidth - t * (2 * halfWidth),
       z: -halfHeight,
     });
   }
 
-  // Left edge: from bottom to top (excluding bottom corner)
-  for (let i = 1; i < leftPoints; i++) {
-    const t = i / Math.max(1, leftPoints - 1);
+  // CRITICAL: Exact bottom-left corner
+  points.push({ y: -halfWidth, z: -halfHeight });
+
+  // Left edge interior points (between bottom-left and top-left corners)
+  for (let i = 0; i < leftEdgePoints; i++) {
+    const t = (i + 1) / (leftEdgePoints + 1);
     points.push({
       y: -halfWidth,
-      z: -halfHeight + t * (2 * halfHeight), // -halfHeight to +halfHeight
+      z: -halfHeight + t * (2 * halfHeight),
     });
   }
 
