@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rectangle Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+        .control {
+            margin: 10px 0;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rectangle Cross-Section Test</h1>
+    
+    <div class="control">
+        <label>Resolution: <input type="number" id="resolution" value="10" min="4" max="100"></label>
+        <button onclick="drawRectangle()">Draw</button>
+    </div>
+    
+    <canvas id="canvas" width="400" height="400"></canvas>
+    
+    <h2>Points Generated:</h2>
+    <pre id="points"></pre>
+
+    <script type="module">
+        // Copy the generateRectanglePoints logic from cross-section.ts
+        function generateRectanglePoints(halfWidth, halfHeight, resolution) {
+            const points = [];
+            const TWO_PI = Math.PI * 2;
+
+            // For very low resolutions
+            if (resolution < 4) {
+                if (resolution === 1) {
+                    points.push({ y: 0, z: halfHeight });
+                } else if (resolution === 2) {
+                    points.push({ y: halfWidth, z: 0 });
+                    points.push({ y: -halfWidth, z: 0 });
+                } else if (resolution === 3) {
+                    points.push({ y: 0, z: halfHeight });
+                    points.push({ y: halfWidth, z: 0 });
+                    points.push({ y: -halfWidth, z: 0 });
+                }
+                return points;
+            }
+
+            // Calculate perimeter
+            const perimeter = 2 * (halfWidth + halfHeight);
+            
+            // For each point, determine its position along the perimeter
+            for (let i = 0; i < resolution; i++) {
+                const t = i / resolution;
+                const perimeterPos = t * perimeter;
+                
+                let y, z;
+                
+                // Start from top center
+                const startOffset = halfWidth / 2;
+                const adjustedPos = (perimeterPos + startOffset) % perimeter;
+                
+                if (adjustedPos < halfWidth) {
+                    // Top edge
+                    y = -halfWidth + adjustedPos;
+                    z = halfHeight;
+                } else if (adjustedPos < halfWidth + halfHeight) {
+                    // Right edge
+                    y = halfWidth;
+                    z = halfHeight - (adjustedPos - halfWidth);
+                } else if (adjustedPos < 2 * halfWidth + halfHeight) {
+                    // Bottom edge
+                    y = halfWidth - (adjustedPos - halfWidth - halfHeight);
+                    z = -halfHeight;
+                } else {
+                    // Left edge
+                    y = -halfWidth;
+                    z = -halfHeight + (adjustedPos - 2 * halfWidth - halfHeight);
+                }
+                
+                // Snap to corners
+                const cornerTolerance = 0.001;
+                if (Math.abs(y - halfWidth) < cornerTolerance && Math.abs(z - halfHeight) < cornerTolerance) {
+                    y = halfWidth;
+                    z = halfHeight;
+                } else if (Math.abs(y - halfWidth) < cornerTolerance && Math.abs(z + halfHeight) < cornerTolerance) {
+                    y = halfWidth;
+                    z = -halfHeight;
+                } else if (Math.abs(y + halfWidth) < cornerTolerance && Math.abs(z + halfHeight) < cornerTolerance) {
+                    y = -halfWidth;
+                    z = -halfHeight;
+                } else if (Math.abs(y + halfWidth) < cornerTolerance && Math.abs(z - halfHeight) < cornerTolerance) {
+                    y = -halfWidth;
+                    z = halfHeight;
+                }
+                
+                points.push({ y, z });
+            }
+
+            return points;
+        }
+
+        window.drawRectangle = function() {
+            const resolution = parseInt(document.getElementById('resolution').value);
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const pointsDiv = document.getElementById('points');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Generate points
+            const halfWidth = 100;
+            const halfHeight = 60;
+            const points = generateRectanglePoints(halfWidth, halfHeight, resolution);
+            
+            // Draw the shape
+            ctx.save();
+            ctx.translate(200, 200);
+            ctx.scale(1.5, 1.5);
+            
+            // Draw the ideal rectangle in light gray
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
+            
+            // Draw the generated points
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                if (i === 0) {
+                    ctx.moveTo(p.y, -p.z);
+                } else {
+                    ctx.lineTo(p.y, -p.z);
+                }
+            }
+            
+            // Close the path
+            if (points.length > 0) {
+                ctx.lineTo(points[0].y, -points[0].z);
+            }
+            
+            ctx.stroke();
+            
+            // Draw points as dots
+            ctx.fillStyle = '#f00';
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                ctx.beginPath();
+                ctx.arc(p.y, -p.z, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Label corner points
+                const isCorner = (
+                    (Math.abs(Math.abs(p.y) - halfWidth) < 0.1 && Math.abs(Math.abs(p.z) - halfHeight) < 0.1)
+                );
+                if (isCorner) {
+                    ctx.fillStyle = '#00f';
+                    ctx.beginPath();
+                    ctx.arc(p.y, -p.z, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#f00';
+                }
+            }
+            
+            ctx.restore();
+            
+            // Display points
+            let pointsText = `Resolution: ${resolution}\n`;
+            pointsText += `Points: ${points.length}\n\n`;
+            
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const isCorner = (
+                    (Math.abs(Math.abs(p.y) - halfWidth) < 0.1 && Math.abs(Math.abs(p.z) - halfHeight) < 0.1)
+                );
+                pointsText += `[${i}]: y=${p.y.toFixed(2)}, z=${p.z.toFixed(2)}${isCorner ? ' <-- CORNER' : ''}\n`;
+            }
+            
+            pointsDiv.textContent = pointsText;
+        }
+        
+        // Initial draw
+        drawRectangle();
+    </script>
+</body>
+</html>

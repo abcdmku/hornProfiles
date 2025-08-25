@@ -730,63 +730,127 @@ function generateMountEdgeConnection(
         return points;
       }
 
-      // For resolution >= 4, distribute points around perimeter
-      const perimeter = 2 * (width + height);
+      // Define the 4 corners (in order starting from top-right, going clockwise)
+      const corners = [
+        { y: width, z: height }, // Top-right
+        { y: width, z: -height }, // Bottom-right
+        { y: -width, z: -height }, // Bottom-left
+        { y: -width, z: height }, // Top-left
+      ];
 
-      for (let i = 0; i < circumferenceSteps; i++) {
-        const t = i / circumferenceSteps;
-        const perimeterPos = t * perimeter;
+      // Calculate perimeter of each edge
+      const edgeLengths = [
+        height * 2, // Right edge (top to bottom)
+        width * 2, // Bottom edge (right to left)
+        height * 2, // Left edge (bottom to top)
+        width * 2, // Top edge (left to right)
+      ];
 
-        let y: number, z: number;
+      const totalPerimeter = edgeLengths.reduce((sum, len) => sum + len, 0);
 
-        // Start from top center and go clockwise
-        const startOffset = width / 2;
-        const adjustedPos = (perimeterPos + startOffset) % perimeter;
+      // We have 4 corners already, distribute remaining points
+      const interiorPoints = circumferenceSteps - 4;
 
-        if (adjustedPos < width) {
-          // Top edge
-          y = -width + adjustedPos;
-          z = height;
-        } else if (adjustedPos < width + height) {
-          // Right edge
-          y = width;
-          z = height - (adjustedPos - width);
-        } else if (adjustedPos < 2 * width + height) {
-          // Bottom edge
-          y = width - (adjustedPos - width - height);
-          z = -height;
-        } else {
-          // Left edge
-          y = -width;
-          z = -height + (adjustedPos - 2 * width - height);
+      if (interiorPoints <= 0) {
+        // Just return the 4 corners
+        return corners;
+      }
+
+      // Distribute interior points proportionally to edge length
+      const pointsPerEdge = edgeLengths.map((len) =>
+        Math.round((interiorPoints * len) / totalPerimeter),
+      );
+
+      // Adjust for rounding errors
+      const totalAllocated = pointsPerEdge.reduce((sum, n) => sum + n, 0);
+      if (totalAllocated < interiorPoints) {
+        const maxIdx = edgeLengths.indexOf(Math.max(...edgeLengths));
+        pointsPerEdge[maxIdx] += interiorPoints - totalAllocated;
+      } else if (totalAllocated > interiorPoints) {
+        const maxIdx = edgeLengths.indexOf(Math.max(...edgeLengths));
+        pointsPerEdge[maxIdx] -= totalAllocated - interiorPoints;
+      }
+
+      // Generate points starting from top center to match ellipse
+      // Start from middle of top edge
+      const topEdgePoints = pointsPerEdge[3];
+      for (let i = Math.floor(topEdgePoints / 2); i < topEdgePoints; i++) {
+        const t = (i + 1) / (topEdgePoints + 1);
+        points.push({
+          y: -width + t * 2 * width,
+          z: height,
+        });
+      }
+
+      // Top-right corner
+      points.push(corners[0]);
+
+      // Right edge interior points
+      for (let i = 0; i < pointsPerEdge[0]; i++) {
+        const t = (i + 1) / (pointsPerEdge[0] + 1);
+        points.push({
+          y: width,
+          z: height - t * 2 * height,
+        });
+      }
+
+      // Bottom-right corner
+      points.push(corners[1]);
+
+      // Bottom edge interior points
+      for (let i = 0; i < pointsPerEdge[1]; i++) {
+        const t = (i + 1) / (pointsPerEdge[1] + 1);
+        points.push({
+          y: width - t * 2 * width,
+          z: -height,
+        });
+      }
+
+      // Bottom-left corner
+      points.push(corners[2]);
+
+      // Left edge interior points
+      for (let i = 0; i < pointsPerEdge[2]; i++) {
+        const t = (i + 1) / (pointsPerEdge[2] + 1);
+        points.push({
+          y: -width,
+          z: -height + t * 2 * height,
+        });
+      }
+
+      // Top-left corner
+      points.push(corners[3]);
+
+      // Top edge interior points (from left to center)
+      for (let i = 0; i < Math.floor(topEdgePoints / 2); i++) {
+        const t = (i + 1) / (topEdgePoints + 1);
+        points.push({
+          y: -width + t * 2 * width,
+          z: height,
+        });
+      }
+
+      // Ensure we have exactly the right number of points
+      while (points.length > circumferenceSteps) {
+        // Remove a non-corner point
+        for (let i = 1; i < points.length - 1; i++) {
+          const p = points[i];
+          const isCorner = corners.some(
+            (c) => Math.abs(c.y - p.y) < 0.001 && Math.abs(c.z - p.z) < 0.001,
+          );
+          if (!isCorner) {
+            points.splice(i, 1);
+            break;
+          }
         }
+      }
 
-        // Snap to exact corner positions if we're very close
-        const cornerTolerance = 0.001;
-        if (Math.abs(y - width) < cornerTolerance && Math.abs(z - height) < cornerTolerance) {
-          y = width;
-          z = height;
-        } else if (
-          Math.abs(y - width) < cornerTolerance &&
-          Math.abs(z + height) < cornerTolerance
-        ) {
-          y = width;
-          z = -height;
-        } else if (
-          Math.abs(y + width) < cornerTolerance &&
-          Math.abs(z + height) < cornerTolerance
-        ) {
-          y = -width;
-          z = -height;
-        } else if (
-          Math.abs(y + width) < cornerTolerance &&
-          Math.abs(z - height) < cornerTolerance
-        ) {
-          y = -width;
-          z = height;
-        }
-
-        points.push({ y, z });
+      while (points.length < circumferenceSteps) {
+        // Add a point on the first edge
+        points.splice(1, 0, {
+          y: (points[0].y + points[1].y) / 2,
+          z: (points[0].z + points[1].z) / 2,
+        });
       }
 
       return points;
