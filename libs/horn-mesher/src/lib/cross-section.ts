@@ -125,7 +125,20 @@ function generateRectanglePoints(
   // Start from middle of top edge
   // Top edge interior points (from center to right)
   const topEdgePoints = pointsPerEdge[3];
-  for (let i = Math.floor(topEdgePoints / 2); i < topEdgePoints; i++) {
+
+  // If odd number of points, add the center point first
+  if (topEdgePoints % 2 === 1) {
+    const centerIdx = Math.floor(topEdgePoints / 2);
+    const t = (centerIdx + 1) / (topEdgePoints + 1);
+    result.push({
+      y: -halfWidth + t * 2 * halfWidth,
+      z: halfHeight,
+    });
+  }
+
+  // Add points from center to right
+  const startIdx = Math.ceil(topEdgePoints / 2);
+  for (let i = startIdx; i < topEdgePoints; i++) {
     const t = (i + 1) / (topEdgePoints + 1);
     result.push({
       y: -halfWidth + t * 2 * halfWidth,
@@ -173,7 +186,8 @@ function generateRectanglePoints(
   result.push(corners[3]);
 
   // Top edge interior points (from left to center)
-  for (let i = 0; i < Math.floor(topEdgePoints / 2); i++) {
+  const endIdx = Math.floor(topEdgePoints / 2);
+  for (let i = 0; i < endIdx; i++) {
     const t = (i + 1) / (topEdgePoints + 1);
     result.push({
       y: -halfWidth + t * 2 * halfWidth,
