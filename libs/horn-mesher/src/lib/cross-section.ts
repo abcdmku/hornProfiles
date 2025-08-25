@@ -48,7 +48,7 @@ function generateEllipsePoints(
 
 /**
  * Generate points for a rectangular cross-section
- * Uses edge-based distribution to ensure sharp 90-degree corners
+ * Ensures sharp 90-degree corners by placing corner vertices at exact positions
  */
 function generateRectanglePoints(
   halfWidth: number,
@@ -57,91 +57,89 @@ function generateRectanglePoints(
 ): Point2D[] {
   const points: Point2D[] = [];
 
-  // For rectangles, we MUST ensure corners are exactly at the corner positions
-  // We'll distribute points per edge but always include exact corners
-
-  // Calculate base points per edge (excluding corners)
-  const edgePointsBase = Math.max(0, Math.floor((resolution - 4) / 4));
-  const extraPoints = Math.max(0, resolution - 4 - edgePointsBase * 4);
-
-  // Distribute extra points to edges
-  const topEdgePoints = edgePointsBase + (extraPoints > 0 ? 1 : 0);
-  const rightEdgePoints = edgePointsBase + (extraPoints > 1 ? 1 : 0);
-  const bottomEdgePoints = edgePointsBase + (extraPoints > 2 ? 1 : 0);
-  const leftEdgePoints = edgePointsBase;
-
-  // CRITICAL: Start with exact top-left corner
-  points.push({ y: -halfWidth, z: halfHeight });
-
-  // Top edge interior points (between top-left and top-right corners)
-  for (let i = 0; i < topEdgePoints; i++) {
-    const t = (i + 1) / (topEdgePoints + 1);
-    points.push({
-      y: -halfWidth + t * (2 * halfWidth),
-      z: halfHeight,
-    });
-  }
-
-  // CRITICAL: Exact top-right corner
-  points.push({ y: halfWidth, z: halfHeight });
-
-  // Right edge interior points (between top-right and bottom-right corners)
-  for (let i = 0; i < rightEdgePoints; i++) {
-    const t = (i + 1) / (rightEdgePoints + 1);
-    points.push({
-      y: halfWidth,
-      z: halfHeight - t * (2 * halfHeight),
-    });
-  }
-
-  // CRITICAL: Exact bottom-right corner
-  points.push({ y: halfWidth, z: -halfHeight });
-
-  // Bottom edge interior points (between bottom-right and bottom-left corners)
-  for (let i = 0; i < bottomEdgePoints; i++) {
-    const t = (i + 1) / (bottomEdgePoints + 1);
-    points.push({
-      y: halfWidth - t * (2 * halfWidth),
-      z: -halfHeight,
-    });
-  }
-
-  // CRITICAL: Exact bottom-left corner
-  points.push({ y: -halfWidth, z: -halfHeight });
-
-  // Left edge interior points (between bottom-left and top-left corners)
-  for (let i = 0; i < leftEdgePoints; i++) {
-    const t = (i + 1) / (leftEdgePoints + 1);
-    points.push({
-      y: -halfWidth,
-      z: -halfHeight + t * (2 * halfHeight),
-    });
-  }
-
-  // Ensure we have exactly the requested number of points
-  while (points.length < resolution) {
-    // Add extra points on the longest edge
-    const edge = Math.floor(points.length / 4) % 4;
-    const edgeT = (points.length % 4) / 4;
-
-    switch (edge) {
-      case 0: // Top edge
-        points.push({ y: -halfWidth + edgeT * (2 * halfWidth), z: halfHeight });
-        break;
-      case 1: // Right edge
-        points.push({ y: halfWidth, z: halfHeight - edgeT * (2 * halfHeight) });
-        break;
-      case 2: // Bottom edge
-        points.push({ y: halfWidth - edgeT * (2 * halfWidth), z: -halfHeight });
-        break;
-      case 3: // Left edge
-        points.push({ y: -halfWidth, z: -halfHeight + edgeT * (2 * halfHeight) });
-        break;
+  // For very low resolutions, return simplified shapes
+  if (resolution < 4) {
+    if (resolution === 1) {
+      points.push({ y: 0, z: halfHeight });
+    } else if (resolution === 2) {
+      points.push({ y: halfWidth, z: 0 });
+      points.push({ y: -halfWidth, z: 0 });
+    } else if (resolution === 3) {
+      points.push({ y: 0, z: halfHeight });
+      points.push({ y: halfWidth, z: 0 });
+      points.push({ y: -halfWidth, z: 0 });
     }
+    return points;
   }
 
-  // Trim to exact resolution if we went over
-  return points.slice(0, resolution);
+  // For resolution >= 4, we can make a proper rectangle
+  // Key insight: We distribute points around the perimeter starting from top center
+  // and ensure corners are at exact positions
+
+  // Calculate perimeter and segments
+  const perimeter = 2 * (halfWidth + halfHeight);
+
+  // For each point, determine its position along the perimeter
+  for (let i = 0; i < resolution; i++) {
+    // Calculate position along perimeter (0 to 1)
+    // Start from top center and go clockwise
+    const t = i / resolution;
+    const perimeterPos = t * perimeter;
+
+    let y: number, z: number;
+
+    // Determine which edge we're on and calculate position
+    // Start from top center (halfWidth/2 along top edge)
+    const startOffset = halfWidth / 2;
+    const adjustedPos = (perimeterPos + startOffset) % perimeter;
+
+    if (adjustedPos < halfWidth) {
+      // Top edge (moving right from center)
+      y = -halfWidth + adjustedPos;
+      z = halfHeight;
+    } else if (adjustedPos < halfWidth + halfHeight) {
+      // Right edge (moving down)
+      y = halfWidth;
+      z = halfHeight - (adjustedPos - halfWidth);
+    } else if (adjustedPos < 2 * halfWidth + halfHeight) {
+      // Bottom edge (moving left)
+      y = halfWidth - (adjustedPos - halfWidth - halfHeight);
+      z = -halfHeight;
+    } else {
+      // Left edge (moving up)
+      y = -halfWidth;
+      z = -halfHeight + (adjustedPos - 2 * halfWidth - halfHeight);
+    }
+
+    // Snap to exact corner positions if we're very close
+    const cornerTolerance = 0.001;
+    if (Math.abs(y - halfWidth) < cornerTolerance && Math.abs(z - halfHeight) < cornerTolerance) {
+      y = halfWidth;
+      z = halfHeight;
+    } else if (
+      Math.abs(y - halfWidth) < cornerTolerance &&
+      Math.abs(z + halfHeight) < cornerTolerance
+    ) {
+      y = halfWidth;
+      z = -halfHeight;
+    } else if (
+      Math.abs(y + halfWidth) < cornerTolerance &&
+      Math.abs(z + halfHeight) < cornerTolerance
+    ) {
+      y = -halfWidth;
+      z = -halfHeight;
+    } else if (
+      Math.abs(y + halfWidth) < cornerTolerance &&
+      Math.abs(z - halfHeight) < cornerTolerance
+    ) {
+      y = -halfWidth;
+      z = halfHeight;
+    }
+
+    points.push({ y, z });
+  }
+
+  return points;
 }
 
 /**

@@ -713,105 +713,83 @@ function generateMountEdgeConnection(
         });
       }
     } else if (mode === "rectangular") {
-      // Use the same exact corner logic as cross-section.ts
-      // to ensure sharp 90-degree corners with vertices EXACTLY at corners
+      // Use the same exact logic as cross-section.ts to ensure consistency
 
-      // Calculate base points per edge (excluding corners)
-      const edgePointsBase = Math.max(0, Math.floor((circumferenceSteps - 4) / 4));
-      const extraPoints = Math.max(0, circumferenceSteps - 4 - edgePointsBase * 4);
-
-      // Distribute extra points to edges
-      const topEdgePoints = edgePointsBase + (extraPoints > 0 ? 1 : 0);
-      const rightEdgePoints = edgePointsBase + (extraPoints > 1 ? 1 : 0);
-      const bottomEdgePoints = edgePointsBase + (extraPoints > 2 ? 1 : 0);
-      const leftEdgePoints = edgePointsBase;
-
-      // CRITICAL: Start with exact top-left corner
-      points.push({ y: -width, z: height });
-
-      // Top edge interior points (between top-left and top-right corners)
-      for (let i = 0; i < topEdgePoints; i++) {
-        const t = (i + 1) / (topEdgePoints + 1);
-        points.push({
-          y: -width + t * (2 * width),
-          z: height,
-        });
-      }
-
-      // CRITICAL: Exact top-right corner
-      points.push({ y: width, z: height });
-
-      // Right edge interior points (between top-right and bottom-right corners)
-      for (let i = 0; i < rightEdgePoints; i++) {
-        const t = (i + 1) / (rightEdgePoints + 1);
-        points.push({
-          y: width,
-          z: height - t * (2 * height),
-        });
-      }
-
-      // CRITICAL: Exact bottom-right corner
-      points.push({ y: width, z: -height });
-
-      // Bottom edge interior points (between bottom-right and bottom-left corners)
-      for (let i = 0; i < bottomEdgePoints; i++) {
-        const t = (i + 1) / (bottomEdgePoints + 1);
-        points.push({
-          y: width - t * (2 * width),
-          z: -height,
-        });
-      }
-
-      // CRITICAL: Exact bottom-left corner
-      points.push({ y: -width, z: -height });
-
-      // Left edge interior points (between bottom-left and top-left corners)
-      for (let i = 0; i < leftEdgePoints; i++) {
-        const t = (i + 1) / (leftEdgePoints + 1);
-        points.push({
-          y: -width,
-          z: -height + t * (2 * height),
-        });
-      }
-
-      // Ensure we have exactly the requested number of points
-      while (points.length < circumferenceSteps) {
-        // Add extra points on edges if needed
-        const edgeIndex = points.length % 4;
-        const lastCornerIndex =
-          Math.floor(points.length / (circumferenceSteps / 4)) * (circumferenceSteps / 4);
-
-        if (edgeIndex === 0) {
-          // Add to top edge
-          const prevPoint = points[lastCornerIndex];
-          const nextPoint = points[lastCornerIndex + 1] || { y: width, z: height };
-          points.push({
-            y: (prevPoint.y + nextPoint.y) / 2,
-            z: height,
-          });
-        } else if (edgeIndex === 1) {
-          // Add to right edge
-          points.push({
-            y: width,
-            z: 0,
-          });
-        } else if (edgeIndex === 2) {
-          // Add to bottom edge
-          points.push({
-            y: 0,
-            z: -height,
-          });
-        } else {
-          // Add to left edge
-          points.push({
-            y: -width,
-            z: 0,
-          });
+      // Special case: if resolution < 4, we can't make a proper rectangle
+      if (circumferenceSteps < 4) {
+        if (circumferenceSteps === 1) {
+          points.push({ y: 0, z: height });
+        } else if (circumferenceSteps === 2) {
+          points.push({ y: width, z: 0 });
+          points.push({ y: -width, z: 0 });
+        } else if (circumferenceSteps === 3) {
+          points.push({ y: 0, z: height });
+          points.push({ y: width, z: 0 });
+          points.push({ y: -width, z: 0 });
         }
+        return points;
       }
 
-      // Trim to exact resolution if we went over
-      return points.slice(0, circumferenceSteps);
+      // For resolution >= 4, distribute points around perimeter
+      const perimeter = 2 * (width + height);
+
+      for (let i = 0; i < circumferenceSteps; i++) {
+        const t = i / circumferenceSteps;
+        const perimeterPos = t * perimeter;
+
+        let y: number, z: number;
+
+        // Start from top center and go clockwise
+        const startOffset = width / 2;
+        const adjustedPos = (perimeterPos + startOffset) % perimeter;
+
+        if (adjustedPos < width) {
+          // Top edge
+          y = -width + adjustedPos;
+          z = height;
+        } else if (adjustedPos < width + height) {
+          // Right edge
+          y = width;
+          z = height - (adjustedPos - width);
+        } else if (adjustedPos < 2 * width + height) {
+          // Bottom edge
+          y = width - (adjustedPos - width - height);
+          z = -height;
+        } else {
+          // Left edge
+          y = -width;
+          z = -height + (adjustedPos - 2 * width - height);
+        }
+
+        // Snap to exact corner positions if we're very close
+        const cornerTolerance = 0.001;
+        if (Math.abs(y - width) < cornerTolerance && Math.abs(z - height) < cornerTolerance) {
+          y = width;
+          z = height;
+        } else if (
+          Math.abs(y - width) < cornerTolerance &&
+          Math.abs(z + height) < cornerTolerance
+        ) {
+          y = width;
+          z = -height;
+        } else if (
+          Math.abs(y + width) < cornerTolerance &&
+          Math.abs(z + height) < cornerTolerance
+        ) {
+          y = -width;
+          z = -height;
+        } else if (
+          Math.abs(y + width) < cornerTolerance &&
+          Math.abs(z - height) < cornerTolerance
+        ) {
+          y = -width;
+          z = height;
+        }
+
+        points.push({ y, z });
+      }
+
+      return points;
     }
 
     return points;
