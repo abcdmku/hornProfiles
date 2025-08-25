@@ -76,13 +76,16 @@ function generateRectanglePoints(
   // We need to ensure corners are ALWAYS present regardless of resolution
 
   // Define the 4 corners with EXACT positions for sharp edges
-  // Using exact values ensures no floating-point errors
+  // CRITICAL: These must be at the exact corner positions
   const corners = [
     { y: halfWidth, z: halfHeight }, // Top-right
     { y: halfWidth, z: -halfHeight }, // Bottom-right
     { y: -halfWidth, z: -halfHeight }, // Bottom-left
     { y: -halfWidth, z: halfHeight }, // Top-left
   ];
+
+  // For debugging: Ensure corners are at expected positions
+  // console.log('Rectangle corners:', corners, 'halfWidth:', halfWidth, 'halfHeight:', halfHeight);
 
   // Calculate perimeter of each edge
   const edgeLengths = [
@@ -120,47 +123,14 @@ function generateRectanglePoints(
     edgeIndex = (edgeIndex + 1) % 4;
   }
 
-  // Generate points starting from top center to match ellipse
-  // First, we need to figure out where top center is in our sequence
+  // For rectangles, we should start from a corner, not the middle of an edge
+  // This ensures proper mesh generation and avoids chamfered corners
   const result: Point2D[] = [];
 
-  // Start from middle of top edge
-  // Top edge interior points
-  const topEdgePoints = pointsPerEdge[3];
+  // Start from top-right corner and go clockwise
+  // This ensures the first point is always a corner
 
-  // For the top edge, we want to start from the center
-  // Generate all top edge points in an array first
-  const topEdgeInteriorPoints: Point2D[] = [];
-  for (let i = 0; i < topEdgePoints; i++) {
-    const t = (i + 1) / (topEdgePoints + 1);
-    topEdgeInteriorPoints.push({
-      y: -halfWidth + t * 2 * halfWidth,
-      z: halfHeight,
-    });
-  }
-
-  // Now add them starting from the middle
-  if (topEdgePoints === 1) {
-    // Single point - just add it (it's already centered)
-    result.push(topEdgeInteriorPoints[0]);
-  } else if (topEdgePoints % 2 === 0) {
-    // Even number - add from middle outward
-    const mid = topEdgePoints / 2;
-    // Add right half
-    for (let i = mid; i < topEdgePoints; i++) {
-      result.push(topEdgeInteriorPoints[i]);
-    }
-  } else {
-    // Odd number - add center, then right half
-    const mid = Math.floor(topEdgePoints / 2);
-    result.push(topEdgeInteriorPoints[mid]); // Center point
-    // Add right half
-    for (let i = mid + 1; i < topEdgePoints; i++) {
-      result.push(topEdgeInteriorPoints[i]);
-    }
-  }
-
-  // Top-right corner
+  // Top-right corner FIRST
   result.push(corners[0]);
 
   // Right edge interior points
@@ -199,23 +169,14 @@ function generateRectanglePoints(
   // Top-left corner
   result.push(corners[3]);
 
-  // Top edge interior points (from left to center)
-  if (topEdgePoints > 1) {
-    if (topEdgePoints % 2 === 0) {
-      // Even number - add left half
-      const mid = topEdgePoints / 2;
-      for (let i = 0; i < mid; i++) {
-        result.push(topEdgeInteriorPoints[i]);
-      }
-    } else {
-      // Odd number - add left half (excluding center which was already added)
-      const mid = Math.floor(topEdgePoints / 2);
-      for (let i = 0; i < mid; i++) {
-        result.push(topEdgeInteriorPoints[i]);
-      }
-    }
+  // Top edge interior points (from left to right, back to start)
+  for (let i = 0; i < pointsPerEdge[3]; i++) {
+    const t = (i + 1) / (pointsPerEdge[3] + 1);
+    result.push({
+      y: -halfWidth + t * 2 * halfWidth,
+      z: halfHeight,
+    });
   }
-  // If topEdgePoints === 1, we already added it at the beginning, so nothing to do here
 
   // Ensure we have exactly the right number of points
   while (result.length > resolution) {
