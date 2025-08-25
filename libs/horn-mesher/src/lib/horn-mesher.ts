@@ -11,8 +11,8 @@ export type { MeshGenerationOptions } from "./types";
  * Automatically selects between 2D and 3D generation based on geometry
  */
 export function generateHornMesh(geometry: HornGeometry, options: MeshGenerationOptions): MeshData {
-  // Check if we can use optimized 2D generation for simple circular horns
-  if (isSimpleCircularHorn(geometry)) {
+  // Check if we can use optimized 2D generation for simple elliptical horns
+  if (isSimpleEllipticalHorn(geometry)) {
     return generateHornMesh2D(geometry.profile, options);
   }
 
@@ -21,11 +21,11 @@ export function generateHornMesh(geometry: HornGeometry, options: MeshGeneration
 }
 
 /**
- * Check if geometry is a simple circular horn that can use 2D generation
+ * Check if geometry is a simple elliptical horn that can use 2D generation
  */
-function isSimpleCircularHorn(geometry: HornGeometry): boolean {
+function isSimpleEllipticalHorn(geometry: HornGeometry): boolean {
   return (
-    geometry.mode === "circle" &&
+    geometry.mode === "ellipse" &&
     !geometry.widthProfile &&
     !geometry.heightProfile &&
     !geometry.driverMount?.enabled &&

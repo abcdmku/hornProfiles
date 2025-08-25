@@ -23,12 +23,12 @@ export function App(): React.JSX.Element {
   });
 
   // Shape transition controls
-  const [throatShape, setThroatShape] = useState<
-    "circle" | "ellipse" | "rectangular" | "superellipse"
-  >("circle");
-  const [mouthShape, setMouthShape] = useState<
-    "circle" | "ellipse" | "rectangular" | "superellipse"
-  >("circle");
+  const [throatShape, setThroatShape] = useState<"ellipse" | "rectangular" | "superellipse">(
+    "ellipse",
+  );
+  const [mouthShape, setMouthShape] = useState<"ellipse" | "rectangular" | "superellipse">(
+    "ellipse",
+  );
   const [morphingFunction, setMorphingFunction] = useState<"linear" | "cubic" | "sigmoid">(
     "linear",
   );
@@ -89,8 +89,8 @@ export function App(): React.JSX.Element {
         cutoffFrequency: 100,
         speedOfSound: 343.2,
         transitionLength: 500,
-        throatShape: "circle",
-        mouthShape: "circle",
+        throatShape: "ellipse",
+        mouthShape: "ellipse",
         morphingFunction: "linear",
       };
     }
@@ -170,7 +170,7 @@ export function App(): React.JSX.Element {
 
     try {
       const hornGeometry: HornGeometry = {
-        mode: throatShape as "circle" | "ellipse" | "rectangular", // Use throat shape as base mode
+        mode: throatShape as "ellipse" | "rectangular", // Use throat shape as base mode
         profile: profile.points,
         widthProfile: profile.widthProfile,
         heightProfile: profile.heightProfile,
@@ -184,8 +184,8 @@ export function App(): React.JSX.Element {
         throatHeight: profile.metadata.parameters.throatHeight || 50,
         width: profile.metadata.parameters.mouthWidth || 600,
         height: profile.metadata.parameters.mouthHeight || 600,
-        throatShape: throatShape as "circle" | "ellipse" | "rectangular",
-        mouthShape: mouthShape as "circle" | "ellipse" | "rectangular",
+        throatShape: throatShape as "ellipse" | "rectangular",
+        mouthShape: mouthShape as "ellipse" | "rectangular",
         wallThickness: wallThickness > 0 ? wallThickness : undefined,
         driverMount: driverMount.enabled ? driverMount : undefined,
         hornMount: hornMount.enabled ? hornMount : undefined,
@@ -535,16 +535,11 @@ export function App(): React.JSX.Element {
                       value={throatShape}
                       onChange={(e) =>
                         setThroatShape(
-                          e.currentTarget.value as
-                            | "circle"
-                            | "ellipse"
-                            | "rectangular"
-                            | "superellipse",
+                          e.currentTarget.value as "ellipse" | "rectangular" | "superellipse",
                         )
                       }
                       className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     >
-                      <option value="circle">Circle</option>
                       <option value="ellipse">Ellipse</option>
                       <option value="rectangular">Rectangular</option>
                       <option value="superellipse">Superellipse</option>
@@ -563,16 +558,11 @@ export function App(): React.JSX.Element {
                       value={mouthShape}
                       onChange={(e) =>
                         setMouthShape(
-                          e.currentTarget.value as
-                            | "circle"
-                            | "ellipse"
-                            | "rectangular"
-                            | "superellipse",
+                          e.currentTarget.value as "ellipse" | "rectangular" | "superellipse",
                         )
                       }
                       className="w-full px-4 py-2.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     >
-                      <option value="circle">Circle</option>
                       <option value="ellipse">Ellipse</option>
                       <option value="rectangular">Rectangular</option>
                       <option value="superellipse">Superellipse</option>

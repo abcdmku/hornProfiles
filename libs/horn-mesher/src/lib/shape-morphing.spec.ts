@@ -27,7 +27,7 @@ describe("shape-morphing", () => {
 
   describe("morphCrossSectionShapes", () => {
     const baseParams: ShapeMorphParams = {
-      sourceShape: "circle",
+      sourceShape: "ellipse",
       targetShape: "rectangular",
       morphFactor: 0.5,
       sourceWidth: 100,
@@ -48,11 +48,15 @@ describe("shape-morphing", () => {
       expect(result).toBeDefined();
       expect(result.length).toBe(8);
 
-      // For circle at factor 0, all points should be at same radius
-      const radius = baseParams.sourceWidth / 2; // Circle uses width as diameter
+      // For ellipse at factor 0, points should form an ellipse with given dimensions
+      const halfWidth = baseParams.sourceWidth / 2;
+      const halfHeight = baseParams.sourceHeight / 2;
       result.forEach((point) => {
-        const pointRadius = Math.sqrt(point.y * point.y + point.z * point.z);
-        expect(pointRadius).toBeCloseTo(radius, 1);
+        // Check that point lies on ellipse: (y/a)² + (z/b)² ≈ 1
+        const ellipseValue =
+          (point.y * point.y) / (halfWidth * halfWidth) +
+          (point.z * point.z) / (halfHeight * halfHeight);
+        expect(ellipseValue).toBeCloseTo(1, 1);
       });
     });
 
@@ -73,7 +77,7 @@ describe("shape-morphing", () => {
       const maxRadius = Math.max(...result.map((p) => Math.sqrt(p.y * p.y + p.z * p.z)));
       const minRadius = Math.min(...result.map((p) => Math.sqrt(p.y * p.y + p.z * p.z)));
 
-      // Rectangular shape should have varying radii (not constant like circle)
+      // Rectangular shape should have varying radii (not constant like ellipse)
       expect(maxRadius).toBeGreaterThan(minRadius);
     });
 
@@ -88,7 +92,7 @@ describe("shape-morphing", () => {
       expect(result).toBeDefined();
       expect(result.length).toBe(8);
 
-      // Should be different from both pure circle and pure rectangle
+      // Should be different from both pure ellipse and pure rectangle
       expect(result).not.toEqual(morphCrossSectionShapes({ ...params, morphFactor: 0 }));
       expect(result).not.toEqual(morphCrossSectionShapes({ ...params, morphFactor: 1 }));
     });
@@ -96,21 +100,21 @@ describe("shape-morphing", () => {
     it("should return same shape when source and target are identical", () => {
       const params: ShapeMorphParams = {
         ...baseParams,
-        sourceShape: "circle",
-        targetShape: "circle",
+        sourceShape: "ellipse",
+        targetShape: "ellipse",
         morphFactor: 0.5,
       };
 
       const result = morphCrossSectionShapes(params);
-      const circleResult = morphCrossSectionShapes({ ...params, morphFactor: 0 });
+      const ellipseResult = morphCrossSectionShapes({ ...params, morphFactor: 0 });
 
       expect(result).toBeDefined();
-      expect(result.length).toBe(circleResult.length);
+      expect(result.length).toBe(ellipseResult.length);
 
-      // Should be same as pure circle since both source and target are circles
+      // Should be same as pure ellipse since both source and target are ellipses
       result.forEach((point, i) => {
-        expect(point.y).toBeCloseTo(circleResult[i].y, 5);
-        expect(point.z).toBeCloseTo(circleResult[i].z, 5);
+        expect(point.y).toBeCloseTo(ellipseResult[i].y, 5);
+        expect(point.z).toBeCloseTo(ellipseResult[i].z, 5);
       });
     });
 

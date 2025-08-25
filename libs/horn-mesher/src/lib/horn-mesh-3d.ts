@@ -115,10 +115,7 @@ function generateIntegratedHornBody(
       let outerWidth: number;
       let outerHeight: number;
 
-      if (geometry.mode === "circle") {
-        outerWidth = offsetProfileRadius * 2;
-        outerHeight = offsetProfileRadius * 2;
-      } else if (geometry.mode === "ellipse" || geometry.mode === "rectangular") {
+      if (geometry.mode === "ellipse" || geometry.mode === "rectangular") {
         // Scale dimensions proportionally based on radius increase
         if (offsetRadius > 0) {
           const scaleFactor = offsetProfileRadius / offsetRadius;
@@ -159,7 +156,7 @@ function generateIntegratedHornBody(
         offsetPosition, // Outer mount position
         geometry.driverMount.outerDiameter, // Width
         geometry.driverMount.outerDiameter, // Height (circular)
-        "circle", // Driver mount is always circular
+        "ellipse", // Driver mount is always elliptical (was circular)
         0, // No additional extension for driver mount edge
         resolution,
       );
@@ -276,10 +273,7 @@ function generateIntegratedHornBody(
       let outerWidth: number;
       let outerHeight: number;
 
-      if (geometry.mode === "circle") {
-        outerWidth = offsetProfileRadius * 2;
-        outerHeight = offsetProfileRadius * 2;
-      } else if (geometry.mode === "ellipse" || geometry.mode === "rectangular") {
+      if (geometry.mode === "ellipse" || geometry.mode === "rectangular") {
         // Scale dimensions proportionally based on radius increase
         if (offsetRadius > 0) {
           const scaleFactor = offsetProfileRadius / offsetRadius;
@@ -710,16 +704,7 @@ function generateMountEdgeConnection(
   ): { y: number; z: number }[] => {
     const points: { y: number; z: number }[] = [];
 
-    if (mode === "circle") {
-      const radius = Math.max(width, height);
-      for (let i = 0; i < circumferenceSteps; i++) {
-        const angle = (i / circumferenceSteps) * 2 * Math.PI;
-        points.push({
-          y: radius * Math.cos(angle),
-          z: radius * Math.sin(angle),
-        });
-      }
-    } else if (mode === "ellipse") {
+    if (mode === "ellipse") {
       for (let i = 0; i < circumferenceSteps; i++) {
         const angle = (i / circumferenceSteps) * 2 * Math.PI;
         points.push({
@@ -951,7 +936,7 @@ function generateHornMountBoltConnections(
   const boltPositions: { y: number; z: number }[] = [];
 
   for (let b = 0; b < boltCount; b++) {
-    if (mouthShape === "circle" || mouthShape === "ellipse") {
+    if (mouthShape === "ellipse") {
       // Radial placement - midway between inner and outer
       // Note: outer has more points due to OUTER_EDGE_MULTIPLIER
       const innerIdx = Math.floor((b / boltCount) * boltReferenceInner.length);

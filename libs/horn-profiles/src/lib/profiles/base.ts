@@ -33,8 +33,8 @@ export abstract class BaseHornProfile extends HornProfile {
       resolution: BaseHornProfile.DEFAULT_RESOLUTION,
       cutoffFrequency: BaseHornProfile.DEFAULT_CUTOFF_FREQUENCY,
       speedOfSound: BaseHornProfile.DEFAULT_SPEED_OF_SOUND,
-      throatShape: "circle",
-      mouthShape: "circle",
+      throatShape: "ellipse",
+      mouthShape: "ellipse",
       morphingFunction: "linear",
     };
   }
@@ -119,8 +119,8 @@ export abstract class BaseHornProfile extends HornProfile {
     }
 
     // Validate shape compatibility
-    const throatShape = params.throatShape ?? "circle";
-    const mouthShape = params.mouthShape ?? "circle";
+    const throatShape = params.throatShape ?? "ellipse";
+    const mouthShape = params.mouthShape ?? "ellipse";
     this.validateShapeTransition(throatShape, mouthShape);
 
     if (errors.length > 0) {
@@ -129,7 +129,7 @@ export abstract class BaseHornProfile extends HornProfile {
   }
 
   protected validateShapeTransition(throat: CrossSectionMode, mouth: CrossSectionMode): void {
-    const supportedShapes = ["circle", "ellipse", "rectangular", "superellipse"];
+    const supportedShapes = ["ellipse", "rectangular", "superellipse"];
     if (!supportedShapes.includes(throat) || !supportedShapes.includes(mouth)) {
       throw new Error(`Unsupported shape transition: ${throat} to ${mouth}`);
     }
@@ -173,8 +173,8 @@ export abstract class BaseHornProfile extends HornProfile {
       resolution: params.resolution ?? BaseHornProfile.DEFAULT_RESOLUTION,
       cutoffFrequency: params.cutoffFrequency ?? BaseHornProfile.DEFAULT_CUTOFF_FREQUENCY,
       speedOfSound: params.speedOfSound ?? BaseHornProfile.DEFAULT_SPEED_OF_SOUND,
-      throatShape: params.throatShape ?? "circle",
-      mouthShape: params.mouthShape ?? "circle",
+      throatShape: params.throatShape ?? "ellipse",
+      mouthShape: params.mouthShape ?? "ellipse",
       transitionLength: params.transitionLength ?? params.length,
       morphingFunction: params.morphingFunction ?? "linear",
     };

@@ -95,7 +95,7 @@ function calculateBoltPosition(
   innerPoints: Point2D[],
   outerPoints: Point2D[],
 ): { centerY: number; centerZ: number } {
-  if (mode === "circle" || mode === "ellipse") {
+  if (mode === "ellipse") {
     // Radial placement - midway between inner and outer
     const innerPoint = innerPoints[Math.floor((boltIndex / boltCount) * innerPoints.length)];
     const outerPoint = outerPoints[Math.floor((boltIndex / boltCount) * outerPoints.length)];

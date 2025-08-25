@@ -4,7 +4,7 @@ import type { HornGeometry } from "@horn-sim/types";
 
 describe("Horn Mesh 3D - Mount Integration", () => {
   const baseGeometry: HornGeometry = {
-    mode: "circle",
+    mode: "ellipse",
     profile: [
       { x: 0, y: 25 },
       { x: 50, y: 35 },

@@ -1,12 +1,7 @@
 export type ProfilePoint = { x: number; y: number }; // mm
 export type ProfileXY = ProfilePoint[];
 
-export type CrossSectionMode =
-  | "circle"
-  | "ellipse"
-  | "superellipse"
-  | "rectangular"
-  | "stereographic";
+export type CrossSectionMode = "ellipse" | "superellipse" | "rectangular" | "stereographic";
 
 export interface DriverMountConfig {
   enabled: boolean;

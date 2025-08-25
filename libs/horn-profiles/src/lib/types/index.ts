@@ -3,12 +3,7 @@ export interface Point2D {
   y: number;
 }
 
-export type CrossSectionMode =
-  | "circle"
-  | "ellipse"
-  | "superellipse"
-  | "rectangular"
-  | "stereographic";
+export type CrossSectionMode = "ellipse" | "superellipse" | "rectangular" | "stereographic";
 
 export interface HornProfileParameters {
   // Backward compatible radius-based parameters (for circular profiles)
@@ -27,8 +22,8 @@ export interface HornProfileParameters {
   speedOfSound?: number; // c - Speed of sound (default: 343.2 m/s)
 
   // Shape transition parameters
-  throatShape?: CrossSectionMode; // Default: "circle"
-  mouthShape?: CrossSectionMode; // Default: "circle"
+  throatShape?: CrossSectionMode; // Default: "ellipse"
+  mouthShape?: CrossSectionMode; // Default: "ellipse"
   transitionLength?: number; // Length over which to morph (default: full length)
   morphingFunction?: "linear" | "cubic" | "sigmoid"; // Default: 'linear'
 }

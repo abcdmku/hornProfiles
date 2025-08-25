@@ -14,7 +14,7 @@ describe("Shape Transition Profile Generation", () => {
         mouthHeight: 300,
         length: 500,
         resolution: 10,
-        throatShape: "circle",
+        throatShape: "ellipse",
         mouthShape: "rectangular",
         transitionLength: 300,
         morphingFunction: "linear",
@@ -30,7 +30,7 @@ describe("Shape Transition Profile Generation", () => {
         const lastPoint = result.shapeProfile[result.shapeProfile.length - 1];
 
         // First point should be pure throat shape (morphingFactor = 0)
-        expect(firstPoint.shape).toBe("circle");
+        expect(firstPoint.shape).toBe("ellipse");
         expect(firstPoint.morphingFactor).toBe(0);
         expect(firstPoint.x).toBe(0);
 
@@ -74,8 +74,8 @@ describe("Shape Transition Profile Generation", () => {
         mouthWidth: 200,
         mouthHeight: 200,
         length: 300,
-        throatShape: "circle",
-        mouthShape: "circle",
+        throatShape: "ellipse",
+        mouthShape: "ellipse",
         morphingFunction: "linear",
       };
 
@@ -87,7 +87,7 @@ describe("Shape Transition Profile Generation", () => {
         // All points should have morphingFactor = 0 (no morphing needed)
         result.shapeProfile.forEach((point) => {
           expect(point.morphingFactor).toBe(0);
-          expect(point.shape).toBe("circle");
+          expect(point.shape).toBe("ellipse");
         });
       }
 
@@ -190,7 +190,7 @@ describe("Shape Transition Profile Generation", () => {
         mouthWidth: 200,
         mouthHeight: 200,
         length: 300,
-        throatShape: "circle",
+        throatShape: "ellipse",
         mouthShape: "rectangular",
         transitionLength: 400, // > length
       };
@@ -205,7 +205,7 @@ describe("Shape Transition Profile Generation", () => {
         mouthWidth: 200,
         mouthHeight: 200,
         length: 300,
-        throatShape: "circle",
+        throatShape: "ellipse",
         mouthShape: "stereographic" as CrossSectionMode, // Unsupported shape for transitions
       };
 
@@ -233,7 +233,7 @@ describe("Shape Transition Profile Generation", () => {
       if (result.shapeProfile) {
         // All points should be default circle shape
         result.shapeProfile.forEach((point) => {
-          expect(point.shape).toBe("circle");
+          expect(point.shape).toBe("ellipse");
           expect(point.morphingFactor).toBe(0);
         });
       }
@@ -247,7 +247,7 @@ describe("Shape Transition Profile Generation", () => {
         mouthHeight: 200,
         length: 400,
         resolution: 8,
-        throatShape: "circle",
+        throatShape: "ellipse",
         mouthShape: "rectangular",
         transitionLength: 400,
       };

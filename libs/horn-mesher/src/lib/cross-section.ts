@@ -13,8 +13,6 @@ export function generateCrossSectionPoints(
   resolution: number,
 ): Point2D[] {
   switch (mode) {
-    case "circle":
-      return generateCirclePoints(halfWidth, resolution);
     case "ellipse":
       return generateEllipsePoints(halfWidth, halfHeight, resolution);
     case "rectangular":
@@ -24,24 +22,6 @@ export function generateCrossSectionPoints(
     default:
       throw new Error(`Unsupported cross-section mode: ${mode}`);
   }
-}
-
-/**
- * Generate points for a circular cross-section
- * Starts from the top (positive Z-axis) for consistent morphing
- */
-function generateCirclePoints(radius: number, resolution: number): Point2D[] {
-  const points: Point2D[] = [];
-
-  for (let i = 0; i < resolution; i++) {
-    const angle = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (π/2)
-    points.push({
-      y: radius * Math.cos(angle),
-      z: radius * Math.sin(angle),
-    });
-  }
-
-  return points;
 }
 
 /**
