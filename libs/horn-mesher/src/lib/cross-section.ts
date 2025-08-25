@@ -68,7 +68,7 @@ function generateEllipsePoints(
 
 /**
  * Generate points for a rectangular cross-section
- * Starts from the top center for consistent morphing with other shapes
+ * Uses angular distribution for proper morphing correspondence
  */
 function generateRectanglePoints(
   halfWidth: number,
@@ -76,43 +76,47 @@ function generateRectanglePoints(
   resolution: number,
 ): Point2D[] {
   const points: Point2D[] = [];
-  const pointsPerSide = Math.floor(resolution / 4);
-  const remainingPoints = resolution - pointsPerSide * 4;
 
-  // Start from top edge (consistent with circle/ellipse starting at top)
-  for (let i = 0; i < pointsPerSide; i++) {
-    const t = i / pointsPerSide;
-    points.push({
-      y: halfWidth - t * 2 * halfWidth, // Start from top-right, go to top-left
-      z: halfHeight,
-    });
-  }
+  for (let i = 0; i < resolution; i++) {
+    const angle = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (π/2)
 
-  // Left edge
-  for (let i = 0; i < pointsPerSide; i++) {
-    const t = i / pointsPerSide;
-    points.push({
-      y: -halfWidth,
-      z: halfHeight - t * 2 * halfHeight, // Go down left side
-    });
-  }
+    // Project angle onto rectangle boundary
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
 
-  // Bottom edge
-  for (let i = 0; i < pointsPerSide; i++) {
-    const t = i / pointsPerSide;
-    points.push({
-      y: -halfWidth + t * 2 * halfWidth, // Go right along bottom
-      z: -halfHeight,
-    });
-  }
+    // Find intersection with rectangle edges
+    let y: number, z: number;
 
-  // Right edge (with remaining points)
-  for (let i = 0; i < pointsPerSide + remainingPoints; i++) {
-    const t = i / (pointsPerSide + remainingPoints);
-    points.push({
-      y: halfWidth,
-      z: -halfHeight + t * 2 * halfHeight, // Go up right side
-    });
+    // Determine which edge the angle intersects
+    // Compare the ray slope against the rectangle corner slopes
+    const absTan = Math.abs(sin / cos);
+    const rectSlope = halfHeight / halfWidth;
+
+    if (absTan <= rectSlope) {
+      // Intersects left or right edge
+      if (cos >= 0) {
+        // Right edge
+        y = halfWidth;
+        z = (halfWidth * sin) / cos;
+      } else {
+        // Left edge
+        y = -halfWidth;
+        z = (-halfWidth * sin) / cos;
+      }
+    } else {
+      // Intersects top or bottom edge
+      if (sin >= 0) {
+        // Top edge
+        z = halfHeight;
+        y = (halfHeight * cos) / sin;
+      } else {
+        // Bottom edge
+        z = -halfHeight;
+        y = (-halfHeight * cos) / sin;
+      }
+    }
+
+    points.push({ y, z });
   }
 
   return points;

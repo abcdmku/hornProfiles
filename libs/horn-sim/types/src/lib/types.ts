@@ -47,6 +47,8 @@ export interface HornGeometry {
   width?: number; // mm, for non-circular mouths
   height?: number; // mm, for non-circular mouths
   throatRadius: number; // mm
+  throatWidth?: number; // mm, throat width for non-circular throats
+  throatHeight?: number; // mm, throat height for non-circular throats
   wallThickness?: number; // mm - horn wall thickness
   throatShape?: CrossSectionMode; // shape at throat
   mouthShape?: CrossSectionMode; // shape at mouth

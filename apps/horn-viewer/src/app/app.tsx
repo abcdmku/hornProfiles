@@ -180,6 +180,8 @@ export function App(): React.JSX.Element {
             profile.metadata.parameters.throatWidth || 50,
             profile.metadata.parameters.throatHeight || 50,
           ) / 2,
+        throatWidth: profile.metadata.parameters.throatWidth || 50,
+        throatHeight: profile.metadata.parameters.throatHeight || 50,
         width: profile.metadata.parameters.mouthWidth || 600,
         height: profile.metadata.parameters.mouthHeight || 600,
         throatShape: throatShape as "circle" | "ellipse" | "rectangular",

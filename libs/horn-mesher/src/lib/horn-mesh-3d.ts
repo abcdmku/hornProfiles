@@ -230,7 +230,7 @@ function generateIntegratedHornBody(
       mountPosition,
       mouthWidth,
       mouthHeight,
-      geometry.mode,
+      geometry.mouthShape || geometry.mode,
       geometry.hornMount,
       resolution,
     );
@@ -306,7 +306,7 @@ function generateIntegratedHornBody(
         outerHeight, // Inner hole height (offset horn surface)
         originalMouthWidth, // Original mouth width for outer boundary
         originalMouthHeight, // Original mouth height for outer boundary
-        geometry.mode,
+        geometry.mouthShape || geometry.mode,
         { ...geometry.hornMount, thickness: 0 }, // Generate face only
         resolution,
       );
@@ -319,7 +319,7 @@ function generateIntegratedHornBody(
         offsetPosition, // Outer mount position (offset inward)
         originalMouthWidth, // Original mouth width
         originalMouthHeight, // Original mouth height
-        geometry.mode, // Use the horn's cross-section mode
+        geometry.mouthShape || geometry.mode, // Use the mouth shape
         geometry.hornMount.widthExtension, // Extension amount
         resolution,
       );
@@ -331,7 +331,7 @@ function generateIntegratedHornBody(
         offsetPosition,
         originalMouthWidth,
         originalMouthHeight,
-        geometry.mode,
+        geometry.mouthShape || geometry.mode,
         geometry.hornMount.boltHoleDiameter,
         geometry.hornMount.boltSpacing,
         geometry.hornMount.widthExtension,
@@ -354,7 +354,7 @@ function generateIntegratedHornBody(
         offsetPosition,
         offsetWidth,
         offsetHeight,
-        geometry.mode,
+        geometry.mouthShape || geometry.mode,
         { ...geometry.hornMount, thickness: 0 }, // Generate face only
         resolution,
       );
@@ -378,7 +378,11 @@ function generateDoubleWalledHornBody(
   wallThickness: number,
   resolution: number,
 ): MeshData {
-  const { mode, widthProfile, heightProfile } = geometry;
+  const { mode, widthProfile, heightProfile, shapeProfile } = geometry;
+
+  // Check if we have shape transitions
+  const hasShapeTransition =
+    shapeProfile && shapeProfile.some((sp) => sp.morphingFactor > 0 && sp.morphingFactor < 1);
   const vertices: number[] = [];
   const indices: number[] = [];
   const normals: number[] = [];
@@ -413,7 +417,47 @@ function generateDoubleWalledHornBody(
 
     // Generate inner cross-section (the design profile)
     const innerRadius = point.y;
-    const crossSection = generateCrossSection(mode, innerRadius, width, height, circumferenceSteps);
+    let crossSection;
+
+    if (hasShapeTransition && shapeProfile) {
+      // Generate morphed cross-section
+      const shapeData = shapeProfile[i] || shapeProfile[shapeProfile.length - 1];
+
+      if (shapeData.morphingFactor === 0) {
+        // Pure throat shape
+        crossSection = generateCrossSection(
+          geometry.throatShape || mode,
+          innerRadius,
+          width,
+          height,
+          circumferenceSteps,
+        );
+      } else if (shapeData.morphingFactor === 1) {
+        // Pure mouth shape
+        crossSection = generateCrossSection(
+          geometry.mouthShape || mode,
+          innerRadius,
+          width,
+          height,
+          circumferenceSteps,
+        );
+      } else {
+        // Morphed shape
+        crossSection = morphCrossSectionShapes({
+          sourceShape: geometry.throatShape || mode,
+          targetShape: geometry.mouthShape || mode,
+          morphFactor: shapeData.morphingFactor,
+          sourceWidth: geometry.throatWidth || geometry.throatRadius * 2,
+          sourceHeight: geometry.throatHeight || geometry.throatRadius * 2,
+          targetWidth: width, // Use current position's interpolated width
+          targetHeight: height, // Use current position's interpolated height
+          resolution: circumferenceSteps,
+        });
+      }
+    } else {
+      // Existing behavior - uniform shape
+      crossSection = generateCrossSection(mode, innerRadius, width, height, circumferenceSteps);
+    }
 
     // Add vertices and normals for inner wall
     for (const csPoint of crossSection) {
@@ -462,33 +506,73 @@ function generateDoubleWalledHornBody(
       geometry.height,
     );
 
-    // For elliptical and rectangular modes, we need to scale the offset proportionally
-    // to maintain the shape while adding thickness
+    // Get the corresponding shape data for this position
+    let currentShape = mode;
+    let needsMorphing = false;
     let outerWidth = width;
     let outerHeight = height;
 
-    if (mode === "ellipse" || mode === "rectangular") {
-      // Calculate the scaling factor based on the radius increase
-      const innerRadius = outerProfile[i].y;
-      const outerRadius = point.y;
-      if (innerRadius > 0) {
-        const scaleFactor = outerRadius / innerRadius;
-        outerWidth = width * scaleFactor;
-        outerHeight = height * scaleFactor;
+    if (hasShapeTransition && shapeProfile) {
+      const shapeData = shapeProfile[i] || shapeProfile[shapeProfile.length - 1];
+
+      if (shapeData.morphingFactor === 0) {
+        currentShape = geometry.throatShape || mode;
+      } else if (shapeData.morphingFactor === 1) {
+        currentShape = geometry.mouthShape || mode;
+      } else {
+        // For morphed shapes, we'll handle this differently below
+        needsMorphing = true;
       }
-    } else {
-      // For circular mode, the radius is already offset correctly
-      outerWidth = point.y * 2;
-      outerHeight = point.y * 2;
     }
 
-    const crossSection = generateCrossSection(
-      mode,
-      point.y,
-      outerWidth,
-      outerHeight,
-      circumferenceSteps,
-    );
+    // For non-morphed shapes, scale the offset proportionally to maintain shape while adding thickness
+    if (!needsMorphing) {
+      if (currentShape === "ellipse" || currentShape === "rectangular") {
+        // Calculate the scaling factor based on the radius increase
+        const innerRadius = outerProfile[i].y;
+        const outerRadius = point.y;
+        if (innerRadius > 0) {
+          const scaleFactor = outerRadius / innerRadius;
+          outerWidth = width * scaleFactor;
+          outerHeight = height * scaleFactor;
+        }
+      } else {
+        // For circular mode, the radius is already offset correctly
+        outerWidth = point.y * 2;
+        outerHeight = point.y * 2;
+      }
+    }
+
+    let crossSection;
+
+    if (needsMorphing && shapeProfile) {
+      const shapeData = shapeProfile[i] || shapeProfile[shapeProfile.length - 1];
+
+      // For morphed outer surfaces, we need to scale the dimensions appropriately
+      const innerRadius = outerProfile[i].y;
+      const outerRadius = point.y;
+      const scaleFactor = innerRadius > 0 ? outerRadius / innerRadius : 1;
+
+      crossSection = morphCrossSectionShapes({
+        sourceShape: geometry.throatShape || mode,
+        targetShape: geometry.mouthShape || mode,
+        morphFactor: shapeData.morphingFactor,
+        sourceWidth: (geometry.throatWidth || geometry.throatRadius * 2) * scaleFactor,
+        sourceHeight: (geometry.throatHeight || geometry.throatRadius * 2) * scaleFactor,
+        targetWidth: width * scaleFactor, // Use current position's scaled width
+        targetHeight: height * scaleFactor, // Use current position's scaled height
+        resolution: circumferenceSteps,
+      });
+    } else {
+      // Use regular cross-section generation
+      crossSection = generateCrossSection(
+        currentShape,
+        point.y,
+        outerWidth,
+        outerHeight,
+        circumferenceSteps,
+      );
+    }
 
     // Add vertices and normals for outer wall
     for (const csPoint of crossSection) {
@@ -826,7 +910,7 @@ function generateHornMountBoltConnections(
   outerPosition: number,
   mouthWidth: number,
   mouthHeight: number,
-  mode: CrossSectionMode,
+  mouthShape: CrossSectionMode,
   boltHoleDiameter: number,
   boltSpacing: number,
   widthExtension: number,
@@ -845,14 +929,14 @@ function generateHornMountBoltConnections(
 
   // Generate reference points exactly as done in mount generation
   const boltReferenceInner = generateCrossSectionPoints(
-    mode,
+    mouthShape,
     mouthWidth / 2,
     mouthHeight / 2,
     resolution,
   );
 
   const outerPoints = generateCrossSectionPoints(
-    mode,
+    mouthShape,
     (mouthWidth / 2) * extensionFactor,
     (mouthHeight / 2) * extensionFactor,
     resolution * MESH_DEFAULTS.OUTER_EDGE_MULTIPLIER,
@@ -867,7 +951,7 @@ function generateHornMountBoltConnections(
   const boltPositions: { y: number; z: number }[] = [];
 
   for (let b = 0; b < boltCount; b++) {
-    if (mode === "circle" || mode === "ellipse") {
+    if (mouthShape === "circle" || mouthShape === "ellipse") {
       // Radial placement - midway between inner and outer
       // Note: outer has more points due to OUTER_EDGE_MULTIPLIER
       const innerIdx = Math.floor((b / boltCount) * boltReferenceInner.length);
@@ -1010,8 +1094,10 @@ function generateHornBodyMesh(
           sourceShape: geometry.throatShape || mode,
           targetShape: geometry.mouthShape || mode,
           morphFactor: shapeData.morphingFactor,
-          width,
-          height,
+          sourceWidth: geometry.throatWidth || geometry.throatRadius * 2,
+          sourceHeight: geometry.throatHeight || geometry.throatRadius * 2,
+          targetWidth: width, // Use current position's interpolated width
+          targetHeight: height, // Use current position's interpolated height
           resolution: circumferenceSteps,
         });
       }
@@ -1110,7 +1196,7 @@ function generateHornMountWithCustomInner(
   innerHeight: number,
   originalMouthWidth: number,
   originalMouthHeight: number,
-  mode: CrossSectionMode,
+  mouthShape: CrossSectionMode,
   config: HornMountConfig,
   resolution: number,
 ): MeshData {
@@ -1128,7 +1214,7 @@ function generateHornMountWithCustomInner(
     position,
     originalMouthWidth,
     originalMouthHeight,
-    mode,
+    mouthShape,
     configWithCustomInner,
     resolution,
   );
@@ -1187,5 +1273,12 @@ function createHornMount(geometry: HornGeometry, resolution: number): MeshData {
     geometry.height,
   );
 
-  return generateHornMount(mouthPosition, mouthWidth, mouthHeight, mode, hornMount, resolution);
+  return generateHornMount(
+    mouthPosition,
+    mouthWidth,
+    mouthHeight,
+    geometry.mouthShape || mode,
+    hornMount,
+    resolution,
+  );
 }

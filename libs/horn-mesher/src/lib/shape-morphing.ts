@@ -6,8 +6,10 @@ export interface ShapeMorphParams {
   sourceShape: CrossSectionMode;
   targetShape: CrossSectionMode;
   morphFactor: number; // 0-1, 0=source, 1=target
-  width: number;
-  height: number;
+  sourceWidth: number;
+  sourceHeight: number;
+  targetWidth: number;
+  targetHeight: number;
   resolution: number;
 }
 
@@ -18,16 +20,35 @@ export interface ShapeMorphParams {
  * Implements shape-based interpolation using normalized point sets
  */
 export function morphCrossSectionShapes(params: ShapeMorphParams): Point2D[] {
-  const { sourceShape, targetShape, morphFactor, width, height, resolution } = params;
+  const {
+    sourceShape,
+    targetShape,
+    morphFactor,
+    sourceWidth,
+    sourceHeight,
+    targetWidth,
+    targetHeight,
+    resolution,
+  } = params;
 
   // Handle same shapes (optimization)
-  if (sourceShape === targetShape) {
-    return generateCrossSectionPoints(sourceShape, width / 2, height / 2, resolution);
+  if (sourceShape === targetShape && sourceWidth === targetWidth && sourceHeight === targetHeight) {
+    return generateCrossSectionPoints(sourceShape, sourceWidth / 2, sourceHeight / 2, resolution);
   }
 
-  // Generate source and target point sets
-  const sourcePoints = generateCrossSectionPoints(sourceShape, width / 2, height / 2, resolution);
-  const targetPoints = generateCrossSectionPoints(targetShape, width / 2, height / 2, resolution);
+  // Generate source and target point sets with their respective dimensions
+  const sourcePoints = generateCrossSectionPoints(
+    sourceShape,
+    sourceWidth / 2,
+    sourceHeight / 2,
+    resolution,
+  );
+  const targetPoints = generateCrossSectionPoints(
+    targetShape,
+    targetWidth / 2,
+    targetHeight / 2,
+    resolution,
+  );
 
   // Normalize point sets to same resolution
   const normalizedSource = normalizePointSet(sourcePoints, resolution);
@@ -57,7 +78,7 @@ function normalizePointSet(points: Point2D[], targetResolution: number): Point2D
   // Generate normalized points with even angular distribution
   const normalized: Point2D[] = [];
   for (let i = 0; i < targetResolution; i++) {
-    const targetAngle = (2 * Math.PI * i) / targetResolution;
+    const targetAngle = (2 * Math.PI * i) / targetResolution + Math.PI / 2; // Start from top (π/2)
     const radius = interpolateRadiusAtAngle(polarPoints, targetAngle);
     normalized.push({
       y: radius * Math.cos(targetAngle),
