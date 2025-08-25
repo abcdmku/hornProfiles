@@ -62,11 +62,17 @@ function generateIntegratedHornBody(
       geometry.height,
     );
 
+    // Use throatShape if specified, otherwise use main mode
+    const throatShape = geometry.throatShape || geometry.mode;
+    // For rectangular throats when mixed with non-rectangular mouths, swap width/height
+    const shouldSwapThroat =
+      throatShape === "rectangular" && geometry.mouthShape && geometry.mouthShape !== "rectangular";
+
     const driverMountMesh = generateDriverMount(
       mountPosition,
-      throatWidth,
-      throatHeight,
-      geometry.mode,
+      shouldSwapThroat ? throatHeight : throatWidth,
+      shouldSwapThroat ? throatWidth : throatHeight,
+      throatShape,
       geometry.driverMount,
       resolution,
     );
@@ -419,11 +425,17 @@ function generateDoubleWalledHornBody(
 
       if (shapeData.morphingFactor === 0) {
         // Pure throat shape
+        const throatShape = geometry.throatShape || mode;
+        // For rectangular throats when mixed with other shapes, swap width/height
+        const shouldSwap =
+          throatShape === "rectangular" &&
+          geometry.mouthShape &&
+          geometry.mouthShape !== "rectangular";
         crossSection = generateCrossSection(
-          geometry.throatShape || mode,
+          throatShape,
           innerRadius,
-          width,
-          height,
+          shouldSwap ? height : width,
+          shouldSwap ? width : height,
           circumferenceSteps,
         );
       } else if (shapeData.morphingFactor === 1) {
@@ -437,12 +449,18 @@ function generateDoubleWalledHornBody(
         );
       } else {
         // Morphed shape
+        const throatShape = geometry.throatShape || mode;
+        const mouthShape = geometry.mouthShape || mode;
+        // For rectangular throats when mixed with non-rectangular mouths, swap width/height
+        const shouldSwapThroat = throatShape === "rectangular" && mouthShape !== "rectangular";
+        const throatW = geometry.throatWidth || geometry.throatRadius * 2;
+        const throatH = geometry.throatHeight || geometry.throatRadius * 2;
         crossSection = morphCrossSectionShapes({
-          sourceShape: geometry.throatShape || mode,
-          targetShape: geometry.mouthShape || mode,
+          sourceShape: throatShape,
+          targetShape: mouthShape,
           morphFactor: shapeData.morphingFactor,
-          sourceWidth: geometry.throatWidth || geometry.throatRadius * 2,
-          sourceHeight: geometry.throatHeight || geometry.throatRadius * 2,
+          sourceWidth: shouldSwapThroat ? throatH : throatW,
+          sourceHeight: shouldSwapThroat ? throatW : throatH,
           targetWidth: width, // Use current position's interpolated width
           targetHeight: height, // Use current position's interpolated height
           resolution: circumferenceSteps,
@@ -571,12 +589,18 @@ function generateDoubleWalledHornBody(
       const outerRadius = point.y;
       const scaleFactor = innerRadius > 0 ? outerRadius / innerRadius : 1;
 
+      const throatShape = geometry.throatShape || mode;
+      const mouthShape = geometry.mouthShape || mode;
+      // For rectangular throats when mixed with non-rectangular mouths, swap width/height
+      const shouldSwapThroat = throatShape === "rectangular" && mouthShape !== "rectangular";
+      const throatW = (geometry.throatWidth || geometry.throatRadius * 2) * scaleFactor;
+      const throatH = (geometry.throatHeight || geometry.throatRadius * 2) * scaleFactor;
       crossSection = morphCrossSectionShapes({
-        sourceShape: geometry.throatShape || mode,
-        targetShape: geometry.mouthShape || mode,
+        sourceShape: throatShape,
+        targetShape: mouthShape,
         morphFactor: shapeData.morphingFactor,
-        sourceWidth: (geometry.throatWidth || geometry.throatRadius * 2) * scaleFactor,
-        sourceHeight: (geometry.throatHeight || geometry.throatRadius * 2) * scaleFactor,
+        sourceWidth: shouldSwapThroat ? throatH : throatW,
+        sourceHeight: shouldSwapThroat ? throatW : throatH,
         targetWidth: width * scaleFactor, // Use current position's scaled width
         targetHeight: height * scaleFactor, // Use current position's scaled height
         resolution: circumferenceSteps,
@@ -1224,12 +1248,18 @@ function generateHornBodyMesh(
         );
       } else {
         // Morphed shape
+        const throatShape = geometry.throatShape || mode;
+        const mouthShape = geometry.mouthShape || mode;
+        // For rectangular throats when mixed with non-rectangular mouths, swap width/height
+        const shouldSwapThroat = throatShape === "rectangular" && mouthShape !== "rectangular";
+        const throatW = geometry.throatWidth || geometry.throatRadius * 2;
+        const throatH = geometry.throatHeight || geometry.throatRadius * 2;
         crossSection = morphCrossSectionShapes({
-          sourceShape: geometry.throatShape || mode,
-          targetShape: geometry.mouthShape || mode,
+          sourceShape: throatShape,
+          targetShape: mouthShape,
           morphFactor: shapeData.morphingFactor,
-          sourceWidth: geometry.throatWidth || geometry.throatRadius * 2,
-          sourceHeight: geometry.throatHeight || geometry.throatRadius * 2,
+          sourceWidth: shouldSwapThroat ? throatH : throatW,
+          sourceHeight: shouldSwapThroat ? throatW : throatH,
           targetWidth: width, // Use current position's interpolated width
           targetHeight: height, // Use current position's interpolated height
           resolution: circumferenceSteps,
