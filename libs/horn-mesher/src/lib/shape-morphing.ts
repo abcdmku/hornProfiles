@@ -31,31 +31,24 @@ export function morphCrossSectionShapes(params: ShapeMorphParams): Point2D[] {
     resolution,
   } = params;
 
-  // Handle same shapes (optimization)
-  if (sourceShape === targetShape && sourceWidth === targetWidth && sourceHeight === targetHeight) {
-    return generateCrossSectionPoints(sourceShape, sourceWidth / 2, sourceHeight / 2, resolution);
-  }
+  // Always keep the cross-section dimensions equal to the target width/height
+  // at this axial station. Morphing affects only the contour shape, not size.
 
-  // Generate source and target point sets with their respective dimensions
-  const sourcePoints = generateCrossSectionPoints(
-    sourceShape,
-    sourceWidth / 2,
-    sourceHeight / 2,
-    resolution,
-  );
-  const targetPoints = generateCrossSectionPoints(
-    targetShape,
-    targetWidth / 2,
-    targetHeight / 2,
-    resolution,
-  );
+  // Generate unit-sized point sets for both shapes (halfWidth=1, halfHeight=1)
+  const unitSource = generateCrossSectionPoints(sourceShape, 1, 1, resolution);
+  const unitTarget = generateCrossSectionPoints(targetShape, 1, 1, resolution);
 
-  // Normalize point sets to same resolution
-  const normalizedSource = normalizePointSet(sourcePoints, resolution);
-  const normalizedTarget = normalizePointSet(targetPoints, resolution);
+  // Normalize to consistent resolution and ordering
+  const normalizedSource = normalizePointSet(unitSource, resolution);
+  const normalizedTarget = normalizePointSet(unitTarget, resolution);
 
-  // Interpolate between normalized point sets
-  return interpolatePointSets(normalizedSource, normalizedTarget, morphFactor);
+  // Interpolate shape in unit space
+  const unitMorphed = interpolatePointSets(normalizedSource, normalizedTarget, morphFactor);
+
+  // Scale to the desired dimensions for this section
+  const halfW = targetWidth / 2;
+  const halfH = targetHeight / 2;
+  return unitMorphed.map((p) => ({ y: p.y * halfW, z: p.z * halfH }));
 }
 
 /**
@@ -72,7 +65,7 @@ function normalizePointSet(points: Point2D[], targetResolution: number): Point2D
 
   if (isRectangular) {
     // For rectangular shapes, preserve the exact corner positions
-    return normalizeRectangularPointSet(points, targetResolution);
+    return normalizeRectangularPointSetTopAligned(points, targetResolution);
   }
 
   // Convert to polar coordinates for smooth shapes
@@ -87,7 +80,7 @@ function normalizePointSet(points: Point2D[], targetResolution: number): Point2D
   // Generate normalized points with even angular distribution
   const normalized: Point2D[] = [];
   for (let i = 0; i < targetResolution; i++) {
-    const targetAngle = (2 * Math.PI * i) / targetResolution + Math.PI / 2; // Start from top (π/2)
+    const targetAngle = (2 * Math.PI * i) / targetResolution + Math.PI / 2; // Start from top (ÃƒÆ’Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬/2)
     const radius = interpolateRadiusAtAngle(polarPoints, targetAngle);
     normalized.push({
       y: radius * Math.cos(targetAngle),
@@ -105,7 +98,7 @@ function interpolateRadiusAtAngle(
   polarPoints: Array<{ angle: number; radius: number }>,
   targetAngle: number,
 ): number {
-  // Normalize target angle to [0, 2π]
+  // Normalize target angle to [0, 2ÃƒÆ’Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬]
   targetAngle = ((targetAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 
   // Find the two points that bracket the target angle
@@ -116,7 +109,7 @@ function interpolateRadiusAtAngle(
     const currentAngle = current.angle;
     let nextAngle = next.angle;
 
-    // Handle angle wrapping around 2π
+    // Handle angle wrapping around 2ÃƒÆ’Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
     if (nextAngle < currentAngle) {
       nextAngle += 2 * Math.PI;
     }
@@ -274,7 +267,7 @@ function normalizeRectangularPointSet(points: Point2D[], targetResolution: numbe
     return normalized;
   }
 
-  // CRITICAL FIX: Use consistent ordering with ellipse (top → left → bottom → right)
+  // CRITICAL FIX: Use consistent ordering with ellipse (top ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ left ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ bottom ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ right)
   // Don't sort by angle as it can disrupt proper point correspondence
 
   // Find corners in the proper order to match ellipse traversal
@@ -287,7 +280,7 @@ function normalizeRectangularPointSet(points: Point2D[], targetResolution: numbe
 
   // Start from top-left and find corners in counter-clockwise order (like ellipse)
   const cornerPositions = [
-    { y: -halfWidth, z: halfHeight }, // Top-left (start point like ellipse at π/2)
+    { y: -halfWidth, z: halfHeight }, // Top-left (start point like ellipse at ÃƒÆ’Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬/2)
     { y: -halfWidth, z: -halfHeight }, // Bottom-left
     { y: halfWidth, z: -halfHeight }, // Bottom-right
     { y: halfWidth, z: halfHeight }, // Top-right
@@ -313,7 +306,7 @@ function normalizeRectangularPointSet(points: Point2D[], targetResolution: numbe
   const pointsPerEdge = Math.floor(targetResolution / 4);
   const remainder = targetResolution % 4;
 
-  // Start from top-left and go counter-clockwise: top-left → bottom-left → bottom-right → top-right
+  // Start from top-left and go counter-clockwise: top-left ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ bottom-left ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ bottom-right ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ top-right
   const edgeSequence = [
     [0, 1], // Top-left to bottom-left
     [1, 2], // Bottom-left to bottom-right
@@ -356,4 +349,43 @@ function interpolatePointSets(source: Point2D[], target: Point2D[], factor: numb
       z: sourcePoint.z + factor * (targetPoint.z - sourcePoint.z),
     };
   });
+}
+
+// Top-center aligned rectangle normalization to keep seam fixed across sections
+function normalizeRectangularPointSetTopAligned(points: Point2D[], targetResolution: number): Point2D[] {
+  if (points.length < 4) return points;
+  const minY = Math.min(...points.map(p => p.y));
+  const maxY = Math.max(...points.map(p => p.y));
+  const minZ = Math.min(...points.map(p => p.z));
+  const maxZ = Math.max(...points.map(p => p.z));
+  const cy = (minY + maxY) / 2, cz = (minZ + maxZ) / 2;
+  const halfWidth = (maxY - minY) / 2;
+  const halfHeight = (maxZ - minZ) / 2;
+
+  const TL = { y: cy - halfWidth, z: cz + halfHeight };
+  const TR = { y: cy + halfWidth, z: cz + halfHeight };
+  const BR = { y: cy + halfWidth, z: cz - halfHeight };
+  const BL = { y: cy - halfWidth, z: cz - halfHeight };
+
+  // CCW edge order, start from TOP going right-to-left (TR -> TL)
+  const edges = [
+    { a: TR, b: TL, length: 2 * halfWidth },
+    { a: TL, b: BL, length: 2 * halfHeight },
+    { a: BL, b: BR, length: 2 * halfWidth },
+    { a: BR, b: TR, length: 2 * halfHeight },
+  ];
+  const per = 4 * (halfWidth + halfHeight);
+  const res = Math.max(4, Math.floor(targetResolution));
+  const step = per / res;
+  const start = edges[0].length / 2; // TR -> top-center along the top edge
+
+  const out: Point2D[] = [];
+  for (let i = 0; i < res; i++) {
+    let s = (start + i * step) % per;
+    let acc = 0, ei = 0;
+    for (; ei < 4; ei++) { const next = acc + edges[ei].length; if (s <= next + 1e-9) { s -= acc; break; } acc = next; }
+    const ed = edges[ei], t = ed.length > 0 ? s / ed.length : 0;
+    out.push({ y: ed.a.y + t * (ed.b.y - ed.a.y), z: ed.a.z + t * (ed.b.z - ed.a.z) });
+  }
+  return out;
 }

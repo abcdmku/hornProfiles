@@ -124,10 +124,10 @@ describe("shape-morphing", () => {
       expect(result.length).toBe(8);
 
       // For ellipse at factor 0, points should form an ellipse with given dimensions
-      const halfWidth = baseParams.sourceWidth / 2;
-      const halfHeight = baseParams.sourceHeight / 2;
+      const halfWidth = baseParams.targetWidth / 2;
+      const halfHeight = baseParams.targetHeight / 2;
       result.forEach((point) => {
-        // Check that point lies on ellipse: (y/a)² + (z/b)² ≈ 1
+        // Check that point lies on ellipse: (y/a)Â² + (z/b)Â² â‰ˆ 1
         const ellipseValue =
           (point.y * point.y) / (halfWidth * halfWidth) +
           (point.z * point.z) / (halfHeight * halfHeight);

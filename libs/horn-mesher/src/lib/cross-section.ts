@@ -18,7 +18,7 @@ export function generateCrossSectionPoints(
     case "rectangular":
       // Pass width and height directly - no swapping needed
       // Width should map to y-axis (horizontal), height to z-axis (vertical)
-      return generateRectanglePoints(halfWidth, halfHeight, resolution);
+      return generateRectanglePointsTopAligned(halfWidth, halfHeight, resolution);
     case "superellipse":
       return generateSuperellipsePoints(halfWidth, halfHeight, resolution);
     default:
@@ -38,7 +38,7 @@ function generateEllipsePoints(
   const points: Point2D[] = [];
 
   for (let i = 0; i < resolution; i++) {
-    const angle = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (π/2)
+    const angle = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (Ãâ‚¬/2)
     points.push({
       y: halfWidth * Math.cos(angle),
       z: halfHeight * Math.sin(angle),
@@ -130,7 +130,7 @@ function generateRectanglePoints(
   // This ensures proper point correspondence with elliptical shapes during morphing
   const result: Point2D[] = [];
 
-  // Define corners in counter-clockwise order starting from top-left (like ellipse at π/2)
+  // Define corners in counter-clockwise order starting from top-left (like ellipse at Ãâ‚¬/2)
   // This prevents the horn self-intersection when morphing rectangular to elliptical shapes
   const orderedCorners = [
     { y: -halfWidth, z: halfHeight }, // Top-left corner (start like ellipse at top)
@@ -227,7 +227,7 @@ function generateSuperellipsePoints(
   const n = 2.5; // Superellipse parameter
 
   for (let i = 0; i < resolution; i++) {
-    const theta = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (π/2)
+    const theta = (i / resolution) * TWO_PI + Math.PI / 2; // Start from top (Ãâ‚¬/2)
     const cosTheta = Math.cos(theta);
     const sinTheta = Math.sin(theta);
 
@@ -255,4 +255,43 @@ export function generateCrossSection(
   const halfHeight = height ? height / 2 : radius;
   const points = generateCrossSectionPoints(mode, halfWidth, halfHeight, steps);
   return points as CrossSectionPoint[];
+}
+
+// Aligned rectangle generator: starts at top-center and proceeds CCW for stable lofts
+function generateRectanglePointsTopAligned(
+  halfWidth: number,
+  halfHeight: number,
+  resolution: number,
+): Point2D[] {
+  const res = Math.max(4, Math.floor(resolution));
+  // Corners
+  const TL = { y: -halfWidth, z: +halfHeight };
+  const TR = { y: +halfWidth, z: +halfHeight };
+  const BR = { y: +halfWidth, z: -halfHeight };
+  const BL = { y: -halfWidth, z: -halfHeight };
+  // CCW edge order starting with TOP going right-to-left (TR -> TL)
+  const edges = [
+    { a: TR, b: TL, length: 2 * halfWidth }, // top (right to left)
+    { a: TL, b: BL, length: 2 * halfHeight }, // left (top to bottom)
+    { a: BL, b: BR, length: 2 * halfWidth }, // bottom (left to right)
+    { a: BR, b: TR, length: 2 * halfHeight }, // right (bottom to top)
+  ];
+  const per = 4 * (halfWidth + halfHeight);
+  const step = per / res;
+  // Distance from TR to top-center along the top edge
+  const start = edges[0].length / 2;
+  const pts: Point2D[] = [];
+  for (let i = 0; i < res; i++) {
+    let s = (start + i * step) % per;
+    let acc = 0; let ei = 0;
+    for (; ei < 4; ei++) {
+      const next = acc + edges[ei].length;
+      if (s <= next + 1e-9) { s -= acc; break; }
+      acc = next;
+    }
+    const ed = edges[ei];
+    const t = ed.length > 0 ? s / ed.length : 0;
+    pts.push({ y: ed.a.y + t * (ed.b.y - ed.a.y), z: ed.a.z + t * (ed.b.z - ed.a.z) });
+  }
+  return pts;
 }
