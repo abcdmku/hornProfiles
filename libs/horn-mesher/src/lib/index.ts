@@ -2,7 +2,14 @@
 export { generateHornMesh, generateHornMesh2D, generateHornMesh3D } from "./horn-mesher";
 
 // Mesh converters
-export { meshToThree, meshToGmsh, meshToElmer } from "./mesh-converters";
+export {
+  meshToThree,
+  meshToGmsh,
+  meshToElmer,
+  meshToSTL,
+  createSTLBlob,
+  downloadSTL,
+} from "./mesh-converters";
 
 // Types
 export type {

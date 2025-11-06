@@ -1,5 +1,6 @@
 import type { MeshData, ElmerMeshData } from "@horn-sim/types";
 import type { ThreeMeshData } from "./types";
+import { meshToSTL, createSTLBlob, downloadSTL } from "./stl-exporter";
 
 /**
  * Convert mesh data to Three.js format
@@ -101,3 +102,6 @@ export function meshToElmer(mesh: MeshData): ElmerMeshData {
     boundaries,
   };
 }
+
+// Re-export STL conversion functions
+export { meshToSTL, createSTLBlob, downloadSTL };

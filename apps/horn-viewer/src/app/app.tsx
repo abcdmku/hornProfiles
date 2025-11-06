@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import { generateProfile, HornProfileParameters, getAvailableProfiles } from "horn-profiles";
 import { HornProfileViewer } from "viewer-2d";
 import { HornViewer3D } from "@horn-sim/viewer-3d";
-import { generateHornMesh3D, meshToThree } from "@horn-sim/mesher";
+import { generateHornMesh3D, meshToThree, downloadSTL } from "@horn-sim/mesher";
 import type { HornGeometry, DriverMountConfig, HornMountConfig } from "@horn-sim/types";
 import { NumericInput } from "../components/NumericInput";
 import { PARAMETER_CONSTRAINTS } from "../utils/constants";
@@ -154,6 +154,60 @@ export function App(): React.JSX.Element {
   }, [profileType, parameters]);
 
   const availableProfiles = getAvailableProfiles();
+
+  // Handler for downloading STL
+  const handleDownloadSTL = useCallback(() => {
+    if (!meshData || !rawMeshData) return;
+
+    const filename = `horn-${profileType}-${Date.now()}.stl`;
+    downloadSTL(rawMeshData, filename);
+  }, [meshData, profileType]);
+
+  // Store raw mesh data for STL export
+  const rawMeshData = useMemo(() => {
+    if (
+      !profile ||
+      !profile.points ||
+      !profile.widthProfile ||
+      !profile.heightProfile ||
+      !profile.metadata?.parameters
+    ) {
+      return null;
+    }
+
+    try {
+      const hornGeometry: HornGeometry = {
+        mode: throatShape as "ellipse" | "rectangular",
+        profile: profile.points,
+        widthProfile: profile.widthProfile,
+        heightProfile: profile.heightProfile,
+        shapeProfile: profile.shapeProfile,
+        throatRadius:
+          Math.min(
+            profile.metadata.parameters.throatWidth || 50,
+            profile.metadata.parameters.throatHeight || 50,
+          ) / 2,
+        throatWidth: profile.metadata.parameters.throatWidth || 50,
+        throatHeight: profile.metadata.parameters.throatHeight || 50,
+        width: profile.metadata.parameters.mouthWidth || 600,
+        height: profile.metadata.parameters.mouthHeight || 600,
+        throatShape: throatShape as "ellipse" | "rectangular",
+        mouthShape: mouthShape as "ellipse" | "rectangular",
+        wallThickness: wallThickness > 0 ? wallThickness : undefined,
+        driverMount: driverMount.enabled ? driverMount : undefined,
+        hornMount: hornMount.enabled ? hornMount : undefined,
+      };
+
+      return generateHornMesh3D(hornGeometry, {
+        resolution: meshResolution,
+        elementSize: 5,
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn("Mesh generation failed:", error);
+      return null;
+    }
+  }, [profile, throatShape, mouthShape, meshResolution, wallThickness, driverMount, hornMount]);
 
   // Generate 3D mesh data when profile changes - safe from errors
   const meshData = useMemo(() => {
@@ -664,6 +718,33 @@ export function App(): React.JSX.Element {
                       />
                       <span>Wireframe</span>
                     </label>
+
+                    <button
+                      onClick={handleDownloadSTL}
+                      disabled={!meshData}
+                      className={`w-full py-2 px-4 rounded-lg font-medium transition-all ${
+                        meshData
+                          ? "bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800 shadow-lg hover:shadow-xl"
+                          : "bg-slate-700/30 text-slate-500 cursor-not-allowed"
+                      }`}
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                          />
+                        </svg>
+                        <span>Download STL</span>
+                      </div>
+                    </button>
                   </div>
                 )}
 
