@@ -100,7 +100,7 @@ export function App(): React.JSX.Element {
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [wireframe, setWireframe] = useState(false);
   const [meshResolution, setMeshResolution] = useState(50);
-  const [wallThickness, setWallThickness] = useState(0);
+  const [wallThickness, setWallThickness] = useState(3); // Default 3mm for 3D printing
 
   // Mount configurations
   const [driverMount, setDriverMount] = useState<DriverMountConfig>({
@@ -697,15 +697,15 @@ export function App(): React.JSX.Element {
                         value={wallThickness}
                         onChange={(e) => {
                           const val = parseFloat(e.currentTarget.value);
-                          setWallThickness(isNaN(val) ? 0 : val);
+                          setWallThickness(isNaN(val) ? 3 : val);
                         }}
                         className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
-                        placeholder="0 for solid horn"
+                        placeholder="3mm (recommended for 3D printing)"
                       />
                       <div className="text-xs text-slate-500 mt-1">
                         {wallThickness > 0
-                          ? `Double-walled: ${wallThickness}mm thick`
-                          : "Solid horn (no wall thickness)"}
+                          ? `Hollow horn: ${wallThickness}mm wall thickness (printable)`
+                          : "Single surface (not recommended for 3D printing)"}
                       </div>
                     </div>
 
