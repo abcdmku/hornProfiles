@@ -107,7 +107,7 @@ function extrudeMountFace(
   backPosition: number,
   outerContour: poly2tri.Point[],
   innerHole: poly2tri.Point[],
-  boltHoles: Array<{ center: { y: number; z: number }; radius: number }>,
+  boltHoles: Array<{ centerY: number; centerZ: number; radius: number }>,
 ): MeshData {
   const vertices: number[] = [];
   const indices: number[] = [];
@@ -155,7 +155,7 @@ function extrudeMountFace(
     for (let i = 0; i < frontVertexCount; i++) {
       const y = vertices[i * 3 + 1];
       const z = vertices[i * 3 + 2];
-      const dist = Math.sqrt((y - boltConfig.center.y) ** 2 + (z - boltConfig.center.z) ** 2);
+      const dist = Math.sqrt((y - boltConfig.centerY) ** 2 + (z - boltConfig.centerZ) ** 2);
       if (Math.abs(dist - boltConfig.radius) < 0.1) {
         boltVertices.push(i);
       }
