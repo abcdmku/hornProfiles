@@ -10,7 +10,7 @@ import type {
 import type { MeshGenerationOptions } from "./types";
 import { generateCrossSection, generateCrossSectionPoints } from "./cross-section";
 import { generateDriverMount, generateHornMount } from "./mounts";
-import { mergeMeshData } from "./mesh-utils";
+import { createWatertightMesh } from "./mesh-utils";
 import { calculateDimensionsAt, trimProfileAtStart, trimProfileAtEnd } from "./profile-utils";
 import { calculatePerimeter } from "./point-utils";
 import { MESH_DEFAULTS } from "./constants";
@@ -364,7 +364,7 @@ function generateIntegratedHornBody(
   }
 
   // Merge all meshes into a single watertight mesh
-  return meshes.length > 1 ? mergeMeshData(meshes) : meshes[0];
+  return meshes.length > 1 ? createWatertightMesh(meshes) : meshes[0];
 }
 
 /**

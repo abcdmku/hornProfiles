@@ -206,7 +206,7 @@ export function weldVerticesAtInterface(
 export function createWatertightMesh(
   meshes: MeshData[],
   _interfaces: number[] = [],
-  _tolerance = 0.001,
+  tolerance = 0.001,
 ): MeshData {
   if (meshes.length === 0) {
     return {
@@ -223,13 +223,52 @@ export function createWatertightMesh(
   // Merge all meshes first
   const mergedMesh = mergeMeshData(meshes);
 
-  // TODO: Implement proper vertex welding at interfaces
-  // For now, return the merged mesh as-is
-  // A proper implementation would:
-  // 1. Find duplicate vertices at interfaces
-  // 2. Merge them
-  // 3. Update indices accordingly
-  // 4. Merge normals for welded vertices
+  // Weld duplicate vertices to create watertight mesh
+  const vertexMap = new Map<string, number>();
+  const weldedVertices: number[] = [];
+  const weldedNormals: number[] = [];
+  const indexRemap = new Map<number, number>();
 
-  return mergedMesh;
+  // Build welded vertex list
+  for (let i = 0; i < mergedMesh.vertices.length; i += 3) {
+    const x = mergedMesh.vertices[i];
+    const y = mergedMesh.vertices[i + 1];
+    const z = mergedMesh.vertices[i + 2];
+
+    // Round to tolerance to create key
+    const key = `${Math.round(x / tolerance)},${Math.round(y / tolerance)},${Math.round(z / tolerance)}`;
+
+    let newIndex = vertexMap.get(key);
+    if (newIndex === undefined) {
+      // New unique vertex
+      newIndex = weldedVertices.length / 3;
+      vertexMap.set(key, newIndex);
+      weldedVertices.push(x, y, z);
+
+      // Average normals if available
+      if (mergedMesh.normals && mergedMesh.normals.length > i) {
+        weldedNormals.push(
+          mergedMesh.normals[i],
+          mergedMesh.normals[i + 1],
+          mergedMesh.normals[i + 2],
+        );
+      }
+    }
+
+    indexRemap.set(i / 3, newIndex);
+  }
+
+  // Remap indices
+  const weldedIndices = new Uint32Array(mergedMesh.indices.length);
+  for (let i = 0; i < mergedMesh.indices.length; i++) {
+    const oldIndex = mergedMesh.indices[i];
+    const newIndex = indexRemap.get(oldIndex);
+    weldedIndices[i] = newIndex !== undefined ? newIndex : oldIndex;
+  }
+
+  return {
+    vertices: new Float32Array(weldedVertices),
+    indices: weldedIndices,
+    normals: weldedNormals.length > 0 ? new Float32Array(weldedNormals) : undefined,
+  };
 }
