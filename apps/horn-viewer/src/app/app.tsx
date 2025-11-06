@@ -104,12 +104,12 @@ export function App(): React.JSX.Element {
 
   // Mount configurations
   const [driverMount, setDriverMount] = useState<DriverMountConfig>({
-    enabled: false,
-    outerDiameter: 150,
-    boltHoleDiameter: 6,
-    boltCircleDiameter: 120,
+    enabled: true,
+    outerDiameter: 120,
+    boltHoleDiameter: 7,
+    boltCircleDiameter: 102,
     boltCount: 4,
-    thickness: 10,
+    thickness: 6,
   });
 
   const [hornMount, setHornMount] = useState<HornMountConfig>({
@@ -704,8 +704,8 @@ export function App(): React.JSX.Element {
                       />
                       <div className="text-xs text-slate-500 mt-1">
                         {wallThickness > 0
-                          ? `Hollow horn: ${wallThickness}mm wall thickness (printable)`
-                          : "Single surface (not recommended for 3D printing)"}
+                          ? `${wallThickness}mm wall thickness`
+                          : "0mm = single surface mesh"}
                       </div>
                     </div>
 

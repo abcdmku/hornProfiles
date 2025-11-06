@@ -44,33 +44,19 @@ export function meshToSTL(mesh: MeshData): ArrayBuffer {
     const v1 = [mesh.vertices[idx1], mesh.vertices[idx1 + 1], mesh.vertices[idx1 + 2]];
     const v2 = [mesh.vertices[idx2], mesh.vertices[idx2 + 1], mesh.vertices[idx2 + 2]];
 
-    // Use existing mesh normals if available (preferred), otherwise calculate from geometry
-    let normal: number[];
-    if (mesh.normals && mesh.normals.length > 0) {
-      // Average the normals of the three vertices for this triangle
-      const n0 = [mesh.normals[idx0], mesh.normals[idx0 + 1], mesh.normals[idx0 + 2]];
-      const n1 = [mesh.normals[idx1], mesh.normals[idx1 + 1], mesh.normals[idx1 + 2]];
-      const n2 = [mesh.normals[idx2], mesh.normals[idx2 + 1], mesh.normals[idx2 + 2]];
+    // Always calculate face normal from geometry (STL standard practice)
+    // This ensures consistent winding order and proper inside/outside detection
+    // edge1 = v1 - v0, edge2 = v2 - v0, normal = edge1 × edge2
+    const edge1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+    const edge2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
 
-      const avgNx = (n0[0] + n1[0] + n2[0]) / 3;
-      const avgNy = (n0[1] + n1[1] + n2[1]) / 3;
-      const avgNz = (n0[2] + n1[2] + n2[2]) / 3;
+    const nx = edge1[1] * edge2[2] - edge1[2] * edge2[1];
+    const ny = edge1[2] * edge2[0] - edge1[0] * edge2[2];
+    const nz = edge1[0] * edge2[1] - edge1[1] * edge2[0];
 
-      const len = Math.sqrt(avgNx * avgNx + avgNy * avgNy + avgNz * avgNz);
-      normal = len > 0 ? [avgNx / len, avgNy / len, avgNz / len] : [0, 0, 1];
-    } else {
-      // Fallback: Calculate normal from vertices (right-hand rule)
-      // edge1 = v1 - v0, edge2 = v2 - v0, normal = edge1 × edge2
-      const edge1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
-      const edge2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
-
-      const nx = edge1[1] * edge2[2] - edge1[2] * edge2[1];
-      const ny = edge1[2] * edge2[0] - edge1[0] * edge2[2];
-      const nz = edge1[0] * edge2[1] - edge1[1] * edge2[0];
-
-      const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-      normal = len > 0 ? [nx / len, ny / len, nz / len] : [0, 0, 1];
-    }
+    // Normalize
+    const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+    const normal = len > 0 ? [nx / len, ny / len, nz / len] : [0, 0, 1];
 
     // Write normal (12 bytes)
     view.setFloat32(offset, normal[0], true);
