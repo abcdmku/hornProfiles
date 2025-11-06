@@ -109,7 +109,7 @@ export function App(): React.JSX.Element {
     boltHoleDiameter: 7,
     boltCircleDiameter: 102,
     boltCount: 4,
-    thickness: 0, // Set to 0 to avoid slicer filling mount cavity
+    thickness: 6,
   });
 
   const [hornMount, setHornMount] = useState<HornMountConfig>({
@@ -117,7 +117,7 @@ export function App(): React.JSX.Element {
     widthExtension: 50,
     boltSpacing: 100,
     boltHoleDiameter: 8,
-    thickness: 0, // Set to 0 to avoid slicer filling mount cavity
+    thickness: 10,
   });
 
   // Safe profile generation - never throw errors to UI
