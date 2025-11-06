@@ -809,6 +809,9 @@ export function App(): React.JSX.Element {
                             }}
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
+                          <div className="text-xs text-slate-500 mt-1">
+                            Set to 0 for STL export (non-zero may cause slicer issues)
+                          </div>
                         </div>
                         <div>
                           <label
@@ -930,6 +933,9 @@ export function App(): React.JSX.Element {
                             }}
                             className="w-full px-3 py-1.5 bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded text-slate-100 text-sm"
                           />
+                          <div className="text-xs text-slate-500 mt-1">
+                            Set to 0 for STL export (non-zero may cause slicer issues)
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
