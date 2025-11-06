@@ -155,14 +155,6 @@ export function App(): React.JSX.Element {
 
   const availableProfiles = getAvailableProfiles();
 
-  // Handler for downloading STL
-  const handleDownloadSTL = useCallback(() => {
-    if (!meshData || !rawMeshData) return;
-
-    const filename = `horn-${profileType}-${Date.now()}.stl`;
-    downloadSTL(rawMeshData, filename);
-  }, [meshData, profileType]);
-
   // Store raw mesh data for STL export
   const rawMeshData = useMemo(() => {
     if (
@@ -208,6 +200,14 @@ export function App(): React.JSX.Element {
       return null;
     }
   }, [profile, throatShape, mouthShape, meshResolution, wallThickness, driverMount, hornMount]);
+
+  // Handler for downloading STL
+  const handleDownloadSTL = useCallback(() => {
+    if (!rawMeshData) return;
+
+    const filename = `horn-${profileType}-${Date.now()}.stl`;
+    downloadSTL(rawMeshData, filename);
+  }, [rawMeshData, profileType]);
 
   // Generate 3D mesh data when profile changes - safe from errors
   const meshData = useMemo(() => {
