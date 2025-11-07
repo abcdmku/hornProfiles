@@ -143,7 +143,7 @@ export function findMatchingVertex(
   x: number,
   y: number,
   z: number,
-  tolerance = 0.001,
+  tolerance = 0.01,
 ): number {
   for (let i = 0; i < vertices.length; i += 3) {
     const dx = Math.abs(vertices[i] - x);
@@ -164,7 +164,7 @@ export function weldVerticesAtInterface(
   bodyVertices: Float32Array,
   mountVertices: Float32Array,
   interfaceX: number,
-  tolerance = 0.001,
+  tolerance = 0.01,
 ): { vertices: Float32Array; indexMap: Map<number, number> } {
   const mergedVertices: number[] = [];
   const indexMap = new Map<number, number>();
@@ -206,7 +206,7 @@ export function weldVerticesAtInterface(
 export function createWatertightMesh(
   meshes: MeshData[],
   _interfaces: number[] = [],
-  tolerance = 0.001,
+  tolerance = 0.01,
 ): MeshData {
   if (meshes.length === 0) {
     return {
