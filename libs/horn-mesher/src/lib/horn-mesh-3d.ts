@@ -49,6 +49,9 @@ function generateIntegratedHornBody(
 ): MeshData {
   const meshes: MeshData[] = [];
   const hasWallThickness = (geometry.wallThickness ?? 0) > 0;
+  const singleWallProfile = hasWallThickness
+    ? originalProfile
+    : getSingleWallProfile(originalProfile, geometry);
 
   // Generate driver mount at original position if enabled
   if (geometry.driverMount?.enabled) {
@@ -190,7 +193,7 @@ function generateIntegratedHornBody(
         geometry.height,
       );
 
-      const innerMountMesh = generateDriverMount(
+      const innerMountMesh = generateDriverMountWithCustomInner(
         offsetPosition,
         offsetWidth,
         offsetHeight,
@@ -200,6 +203,50 @@ function generateIntegratedHornBody(
       );
 
       meshes.push(innerMountMesh);
+
+      const throatInnerWidth = shouldSwapThroat ? throatHeight : throatWidth;
+      const throatInnerHeight = shouldSwapThroat ? throatWidth : throatHeight;
+      const { width: interfaceWidth, height: interfaceHeight } = calculateDimensionsAt(
+        geometry.profile,
+        geometry.widthProfile,
+        geometry.heightProfile,
+        offsetPosition,
+        geometry.width,
+        geometry.height,
+      );
+
+      const innerConnection = generateMountInnerConnection(
+        mountPosition,
+        offsetPosition,
+        throatInnerWidth,
+        throatInnerHeight,
+        interfaceWidth,
+        interfaceHeight,
+        throatShape,
+        resolution,
+      );
+      meshes.push(innerConnection);
+
+      const edgeConnection = generateMountEdgeConnection(
+        mountPosition,
+        offsetPosition,
+        geometry.driverMount.outerDiameter,
+        geometry.driverMount.outerDiameter,
+        "ellipse",
+        0,
+        resolution,
+      );
+      meshes.push(edgeConnection);
+
+      const boltConnections = generateBoltHoleConnections(
+        mountPosition,
+        offsetPosition,
+        geometry.driverMount.boltCircleDiameter,
+        geometry.driverMount.boltHoleDiameter,
+        geometry.driverMount.boltCount,
+        resolution,
+      );
+      meshes.push(boltConnections);
     }
   }
 
@@ -213,7 +260,7 @@ function generateIntegratedHornBody(
     );
     meshes.push(doubleWalledMesh);
   } else {
-    const hornBodyMesh = generateHornBodyMesh(geometry, originalProfile, resolution);
+    const hornBodyMesh = generateHornBodyMesh(geometry, singleWallProfile, resolution);
     meshes.push(hornBodyMesh);
   }
 
@@ -350,16 +397,54 @@ function generateIntegratedHornBody(
         geometry.height,
       );
 
-      const innerMountMesh = generateHornMount(
+      const innerMountMesh = generateHornMountWithCustomInner(
         offsetPosition,
         offsetWidth,
         offsetHeight,
+        geometry.width ?? mouthWidth,
+        geometry.height ?? mouthHeight,
         geometry.mouthShape || geometry.mode,
         { ...geometry.hornMount, thickness: 0 }, // Generate face only
         resolution,
       );
 
       meshes.push(innerMountMesh);
+
+      const innerConnection = generateMountInnerConnection(
+        mountPosition,
+        offsetPosition,
+        mouthWidth,
+        mouthHeight,
+        offsetWidth,
+        offsetHeight,
+        geometry.mouthShape || geometry.mode,
+        resolution,
+      );
+      meshes.push(innerConnection);
+
+      const edgeConnection = generateMountEdgeConnection(
+        mountPosition,
+        offsetPosition,
+        geometry.width ?? mouthWidth,
+        geometry.height ?? mouthHeight,
+        geometry.mouthShape || geometry.mode,
+        geometry.hornMount.widthExtension,
+        resolution,
+      );
+      meshes.push(edgeConnection);
+
+      const boltConnections = generateHornMountBoltConnections(
+        mountPosition,
+        offsetPosition,
+        geometry.width ?? mouthWidth,
+        geometry.height ?? mouthHeight,
+        geometry.mouthShape || geometry.mode,
+        geometry.hornMount.boltHoleDiameter,
+        geometry.hornMount.boltSpacing,
+        geometry.hornMount.widthExtension,
+        resolution,
+      );
+      meshes.push(boltConnections);
     }
   }
 
@@ -761,7 +846,10 @@ function generateMountEdgeConnection(
   const indices: number[] = [];
   const normals: number[] = [];
 
-  const circumferenceSteps = resolution;
+  const circumferenceSteps = Math.max(
+    MESH_DEFAULTS.MIN_POLYGON_POINTS,
+    resolution * MESH_DEFAULTS.OUTER_EDGE_MULTIPLIER,
+  );
 
   // Calculate the actual outer dimensions including extension
   const extensionFactor = 1 + mountExtension / Math.max(width, height);
@@ -981,6 +1069,76 @@ function generateMountEdgeConnection(
 }
 
 /**
+ * Generate a connection between two mount faces at their inner edges.
+ * This is used to bridge the horn body to offset mount planes for single-walled builds.
+ */
+function generateMountInnerConnection(
+  startPosition: number,
+  endPosition: number,
+  startWidth: number,
+  startHeight: number,
+  endWidth: number,
+  endHeight: number,
+  mode: CrossSectionMode,
+  resolution: number,
+): MeshData {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const normals: number[] = [];
+
+  const circumferenceSteps = Math.max(MESH_DEFAULTS.MIN_POLYGON_POINTS, resolution);
+  const startPoints = generateCrossSectionPoints(
+    mode,
+    startWidth / 2,
+    startHeight / 2,
+    circumferenceSteps,
+  );
+  const endPoints = generateCrossSectionPoints(
+    mode,
+    endWidth / 2,
+    endHeight / 2,
+    circumferenceSteps,
+  );
+
+  for (const point of startPoints) {
+    vertices.push(startPosition, point.y, point.z);
+    const len = Math.sqrt(point.y * point.y + point.z * point.z);
+    if (len > 0) {
+      normals.push(0, point.y / len, point.z / len);
+    } else {
+      normals.push(0, 0, 1);
+    }
+  }
+
+  for (const point of endPoints) {
+    vertices.push(endPosition, point.y, point.z);
+    const len = Math.sqrt(point.y * point.y + point.z * point.z);
+    if (len > 0) {
+      normals.push(0, point.y / len, point.z / len);
+    } else {
+      normals.push(0, 0, 1);
+    }
+  }
+
+  for (let i = 0; i < circumferenceSteps; i++) {
+    const j = (i + 1) % circumferenceSteps;
+    const start1 = i;
+    const start2 = j;
+    const end1 = circumferenceSteps + i;
+    const end2 = circumferenceSteps + j;
+
+    indices.push(start1, start2, end1);
+    indices.push(start2, end2, end1);
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+    normals: new Float32Array(normals),
+  };
+}
+
+/**
  * Generate cylindrical connections between bolt holes on inner and outer mount faces
  */
 function generateBoltHoleConnections(
@@ -997,7 +1155,7 @@ function generateBoltHoleConnections(
 
   const boltRadius = boltHoleDiameter / 2;
   const boltCircleRadius = boltCircleDiameter / 2;
-  const holeResolution = Math.max(8, Math.floor(resolution / 4)); // Fewer segments for bolt holes
+  const holeResolution = MESH_DEFAULTS.HOLE_RESOLUTION;
 
   // Generate each bolt hole cylinder
   for (let boltIdx = 0; boltIdx < boltCount; boltIdx++) {
@@ -1079,7 +1237,7 @@ function generateHornMountBoltConnections(
   const normals: number[] = [];
 
   const boltRadius = boltHoleDiameter / 2;
-  const holeResolution = Math.max(8, Math.floor(resolution / 4));
+  const holeResolution = MESH_DEFAULTS.HOLE_RESOLUTION;
 
   // Use the EXACT same point generation as the mount generation
   // This matches what generateHornMount does in mounts.ts
@@ -1386,6 +1544,30 @@ function generateHornMountWithCustomInner(
 
 // Re-export helper functions for compatibility
 export { createDriverMount, createHornMount };
+
+/**
+ * Trim the horn profile for single-walled constructions so the body starts/ends
+ * at the mount offsets. This prevents overlapping faces between the horn shell
+ * and the mount connectors.
+ */
+function getSingleWallProfile(profile: ProfileXY, geometry: HornGeometry): ProfileXY {
+  let trimmedProfile = [...profile];
+
+  if (geometry.driverMount?.enabled && geometry.driverMount.thickness > 0) {
+    trimmedProfile = trimProfileAtStart(trimmedProfile, geometry.driverMount.thickness);
+  }
+
+  if (geometry.hornMount?.enabled && geometry.hornMount.thickness > 0) {
+    trimmedProfile = trimProfileAtEnd(trimmedProfile, geometry.hornMount.thickness);
+  }
+
+  // Ensure we never return an empty profile
+  if (trimmedProfile.length === 0) {
+    return profile;
+  }
+
+  return trimmedProfile;
+}
 
 /**
  * Helper function to create driver mount (backward compatibility)
